@@ -1,0 +1,21 @@
+{
+    "extends": "./tsconfig.base.json",
+    "compilerOptions": {
+        "outDir": "build/examples",
+        "declarationDir": "build/examples",
+        "tsBuildInfoFile": "build/tsbuildinfo/examples.tsbuildinfo",
+        "tsPlusConfig": "./tsplus.config.json",
+        "rootDir": "examples"
+    },
+    "include": [
+        "examples/**/*.ts"
+    ],
+    "files": [
+        "./examples/global.ts"
+    ],
+    "references": [
+        {
+            "path": "./tsconfig.build.json"
+        }
+    ]
+}
