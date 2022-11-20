@@ -95,6 +95,13 @@ export function setStrokeStyle(style: string): Render<never, void> {
     return Effect.unit
   })
 }
+/** @tsplus static Canvas/Ops setLineWidth */
+export function setLineWidth(width: number): Render<never, void> {
+  return Effect.service(Canvas.Tag).tap(ctx => {
+    ctx.lineWidth = width
+    return Effect.unit
+  })
+}
 /** @tsplus static Canvas/Ops setFillStyle */
 export function setFillStyle(style: string): Render<never, void> {
   return Effect.service(Canvas.Tag).tap(ctx => {
