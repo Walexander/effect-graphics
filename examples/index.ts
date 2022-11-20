@@ -1,6 +1,5 @@
-import { btree } from 'effect-canvas/algae-curve'
 import { Canvas } from 'effect-canvas/Canvas'
-import { koch } from 'effect-canvas/koch-curve'
+import { binaryTree, diamond, plant as plantCurve, snowflake } from 'effect-canvas/lsystem/curves'
 
 export const triangle = Effect.logSpan('triangle')(
   Effect.log('... starting ...')
@@ -57,56 +56,80 @@ const cross = Canvas.withContext(
     > ctx.fillRect({ x: 80, y: 60, width: 140, height: 30 })
 )
 
-export const clear = Canvas.clearRect({ x: 0, y: 0, width: 600, height: 600 })
+export const trees = Canvas.setLineWidth(2) >
+  Canvas.setFillStyle('black') >
+  Canvas.fillRect({ height: 600, width: 600, x: 0, y: 0 }) >
+  Canvas.withContext(
+    Canvas.setStrokeStyle('white') >
+      Canvas.translate(300, 600) >
+      Canvas.scale(0.75, 0.75) >
+      binaryTree(8)
+  )
+  > Canvas.withContext(
+    Canvas.setStrokeStyle('orange') >
+      Canvas.translate(300, 600) >
+      Canvas.scale(1.5, 1.5) >
+      binaryTree(5)
+  )
+// > Canvas.withContext(
+//   Canvas.setStrokeStyle('green') >
+//     Canvas.translate(300, 600) >
+//     Canvas.scale(1.25, 1.25) >
+//     btree(6)
+// )
+// > Canvas.withContext(
+//   Canvas.setStrokeStyle('purple') >
+//     Canvas.translate(300, 600) >
+//     Canvas.scale(1, 1) >
+//     btree(7)
+// )
+// > Canvas.withContext(
+//   Canvas.setStrokeStyle('blue') >
+//     Canvas.translate(300, 600) >
+//     Canvas.scale(0.75, 0.75) >
+//     btree(8)
+// )
 
-export const draw = (program: Effect<CanvasRenderingContext2D, never, void>) =>
+const clear = Canvas.clearRect({ x: 0, y: 0, width: 600, height: 600 })
+const myPlant = Canvas.withContext(
+  Canvas.setLineWidth(1) >
+    Canvas.setFillStyle('#f5f6eb') >
+    Canvas.setStrokeStyle('hsla(68, 40%, 50%, 0.5)') >
+    Canvas.fillRect({ height: 600, width: 600, x: 0, y: 0 }) >
+    Canvas.translate(50, 450) >
+    Canvas.scale(2.5, 2.5) >
+    plantCurve(5) > Canvas.stroke()
+)
+const kochCurveExample = Canvas.withContext(
+  Canvas.setFillStyle('hsla(0, 0%, 0%, 0.8)') >
+    Canvas.setStrokeStyle('hsla(0, 0%, 100%, 0.5)') >
+    Canvas.fillRect({ height: 600, width: 600, x: 0, y: 0 }) >
+    Canvas.withContext(
+      Canvas.translate(400, 200) >
+        Canvas.scale(0.75, 0.75) >
+        diamond(5)
+    ) >
+    Canvas.withContext(
+      Canvas.setStrokeStyle('red') >
+        Canvas.translate(450, 400) >
+        Canvas.scale(0.75, 0.75) >
+        snowflake(5)
+    ) >
+    Canvas.stroke()
+)
+
+const draw = (program: Effect<CanvasRenderingContext2D, never, void>) =>
   program
-    .provideLayer(Canvas.liveLayer('canvas1'))
+    .provideSomeLayer(Canvas.liveLayer('canvas1'))
     .provideSomeLayer(Logger.consoleLoggerLayer)
     .unsafeRunPromise()
 
 export function init() {
-  document.getElementById('koch-snowflake')?.addEventListener('click', () =>
-    draw(Canvas.withContext(
-      Canvas.translate(200, 300) >
-        Canvas.scale(1.5, 1.5) > koch(4) > Canvas.stroke()
-    )))
-  document.getElementById('btree')?.addEventListener('click', () =>
-    draw(
-      Canvas.withContext(
-        Canvas.setStrokeStyle('darkgrey') >
-          Canvas.translate(300, 600) >
-          Canvas.scale(1.75, 1.75) >
-          btree(4)
-      )
-        > Canvas.withContext(
-          Canvas.setStrokeStyle('orange') >
-            Canvas.translate(300, 600) >
-            Canvas.scale(1.5, 1.5) >
-            btree(5)
-        )
-        > Canvas.withContext(
-          Canvas.setStrokeStyle('green') >
-            Canvas.translate(300, 600) >
-            Canvas.scale(1.25, 1.25) >
-            btree(6)
-        )
-        > Canvas.withContext(
-          Canvas.setStrokeStyle('purple') >
-            Canvas.translate(300, 600) >
-            Canvas.scale(1, 1) >
-            btree(7)
-        )
-        > Canvas.withContext(
-          Canvas.setStrokeStyle('blue') >
-            Canvas.translate(300, 600) >
-            Canvas.scale(0.75, 0.75) >
-            btree(8)
-        )
-    ))
+  document.getElementById('koch-snowflake')?.addEventListener('click', () => draw(kochCurveExample))
+  document.getElementById('btree')?.addEventListener('click', () => draw(trees))
   document.getElementById('triangle')?.addEventListener(
     'click',
-    () => draw(triangle > Canvas.setFillStyle('#000000') > Canvas.fill())
+    () => draw(myPlant)
   )
   document.getElementById('cross')?.addEventListener('click', () => draw(cross))
   document.getElementById('circle')?.addEventListener('click', () =>
