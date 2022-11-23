@@ -13,13 +13,21 @@
       <button id=cross>Cross</button>
       <button id=all>All</button>
     </div>
+    <div style="display: flex; flex-direction: column; row-gap: 1.5rem;">
+    <div style="display: flex; align-items: center; flex-direction: column; justify-content: center;" id="root">
+      <h2>Canvas 2</h2>
+      <canvas id="canvas2" width="300" height="300" style="border: 1px solid black;"></canvas>
+    </div>
     <div style="display: flex; align-items: center; flex-direction: column; justify-content: center;" id="root">
       <button id=clear>Clear</button>
       <canvas id="canvas1" width="600" height="600" style="border: 1px solid black;"></canvas>
     </div>
+    </div>
     <script type=module>
       import { init } from '../dist/index.js'
+      import { init2 } from '../dist/index2.js'
       init()
+      init2()
     </script>
   </body>
 </html>

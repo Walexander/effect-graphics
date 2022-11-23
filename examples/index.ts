@@ -1,3 +1,4 @@
+import type { Point } from 'effect-canvas/Canvas'
 import { Canvas } from 'effect-canvas/Canvas'
 import { binaryTree, diamond, plant as plantCurve, snowflake } from 'effect-canvas/lsystem/curves'
 
@@ -56,21 +57,16 @@ const cross = Canvas.withContext(
     > ctx.fillRect({ x: 80, y: 60, width: 140, height: 30 })
 )
 
-export const trees = Canvas.setLineWidth(2) >
-  Canvas.setFillStyle('black') >
-  Canvas.fillRect({ height: 600, width: 600, x: 0, y: 0 }) >
-  Canvas.withContext(
-    Canvas.setStrokeStyle('white') >
-      Canvas.translate(300, 600) >
-      Canvas.scale(0.75, 0.75) >
-      binaryTree(8)
-  )
-  > Canvas.withContext(
-    Canvas.setStrokeStyle('orange') >
-      Canvas.translate(300, 600) >
-      Canvas.scale(1.5, 1.5) >
-      binaryTree(5)
-  )
+export const trees = Canvas.withContext(
+  (Canvas.setLineWidth(1) >
+        Canvas.translate(300, 600) >
+        Canvas.scale(1.25, 1.25) >
+        Canvas.setStrokeStyle('orange')) >
+      binaryTree(4) &
+    binaryTree(5) &
+    binaryTree(6) &
+    binaryTree(7)
+)
 // > Canvas.withContext(
 //   Canvas.setStrokeStyle('green') >
 //     Canvas.translate(300, 600) >
@@ -90,33 +86,64 @@ export const trees = Canvas.setLineWidth(2) >
 //     btree(8)
 // )
 
-const clear = Canvas.clearRect({ x: 0, y: 0, width: 600, height: 600 })
 const myPlant = Canvas.withContext(
   Canvas.setLineWidth(1) >
-    Canvas.setFillStyle('#f5f6eb') >
-    Canvas.setStrokeStyle('hsla(68, 40%, 50%, 0.5)') >
-    Canvas.fillRect({ height: 600, width: 600, x: 0, y: 0 }) >
-    Canvas.translate(50, 450) >
-    Canvas.scale(2.5, 2.5) >
-    plantCurve(5) > Canvas.stroke()
+    Canvas.setStrokeStyle('hsla(68, 40%, 50%, 0.85)') >
+    Canvas.setFillStyle('hsla(68, 40%, 50%, 0.25)') >
+    Canvas.dimensions().flatMap(({ height, width }) =>
+      Canvas.fillRect({ height, width, x: 0, y: 0 }) >
+        Canvas.translate(50, 450) >
+        Canvas.scale(2.5, 2.5) >
+        plantCurve(5) > Canvas.stroke()
+    )
 )
 const kochCurveExample = Canvas.withContext(
-  Canvas.setFillStyle('hsla(0, 0%, 0%, 0.8)') >
-    Canvas.setStrokeStyle('hsla(0, 0%, 100%, 0.5)') >
-    Canvas.fillRect({ height: 600, width: 600, x: 0, y: 0 }) >
-    Canvas.withContext(
-      Canvas.translate(400, 200) >
-        Canvas.scale(0.75, 0.75) >
-        diamond(5)
-    ) >
-    Canvas.withContext(
-      Canvas.setStrokeStyle('red') >
+  Canvas.setFillStyle('hsla(0, 0%, 0%, 0.25)') >
+    Canvas.setStrokeStyle('red') >
+    Canvas.dimensions().flatMap(({ height, width }) =>
+      Canvas.fillRect({ height, width, x: 0, y: 0 }) >
         Canvas.translate(450, 400) >
-        Canvas.scale(0.75, 0.75) >
-        snowflake(5)
-    ) >
-    Canvas.stroke()
+        Canvas.scale(1, 1) >
+        diamond(4).zipPar(snowflake(4)) >
+        Canvas.stroke()
+    )
 )
+
+export const gridLines = Canvas.dimensions().flatMap(({ height, width }) =>
+  Canvas.withContext(
+    Canvas.clearRect({ x: 0, y: 0, width, height }) >
+      Canvas.setStrokeStyle('lightgrey') >
+      Canvas.setFillStyle('hsla(0, 0%, 100%, 1)') >
+      Canvas.beginPath() >
+      Canvas.dimensions().flatMap(({ height, width }) =>
+        Canvas.fillRect({ height, width, x: 0, y: 0 }) >
+          Effect.collect(
+            Chunk.range(0, width / 10).map(_ => _ * 10),
+            (_) =>
+              Canvas.withContext(
+                Canvas.setStrokeStyle(_ % 100 == 0 ? 'darkgrey' : 'lightgrey') >
+                  gridLine({ x: _, y: 0 }, { x: _, y: height })
+              )
+          ) >
+          Effect.collect(
+            Chunk.range(0, height / 10).map(_ => _ * 10),
+            (_) =>
+              Canvas.withContext(
+                Canvas.setStrokeStyle(_ % 100 == 0 ? 'darkgrey' : 'lightgrey') >
+                  gridLine({ x: 0, y: _ }, { x: width, y: _ })
+              )
+          )
+      )
+        .orDie
+        .unit
+  )
+)
+
+export const gridLine = (from: Point, to: Point) =>
+  Canvas.withContext(
+    Canvas.beginPath() >
+      Canvas.moveTo(from) > Canvas.lineTo(to) > Canvas.stroke()
+  )
 
 const draw = (program: Effect<CanvasRenderingContext2D, never, void>) =>
   program
@@ -125,6 +152,7 @@ const draw = (program: Effect<CanvasRenderingContext2D, never, void>) =>
     .unsafeRunPromise()
 
 export function init() {
+  Canvas.drawTo('canvas1', gridLines)
   document.getElementById('koch-snowflake')?.addEventListener('click', () => draw(kochCurveExample))
   document.getElementById('btree')?.addEventListener('click', () => draw(trees))
   document.getElementById('triangle')?.addEventListener(
@@ -137,10 +165,10 @@ export function init() {
       circle > Canvas.stroke()
         > Canvas.save() > Canvas.setFillStyle('#ffffff') > Canvas.fill() > Canvas.restore()
     ))
-  document.getElementById('clear')?.addEventListener('click', () => draw(clear))
+  document.getElementById('clear')?.addEventListener('click', () => draw(gridLines))
   document.getElementById('all')?.addEventListener('click', () =>
     draw(
-      clear > triangle > Canvas.fill() > smallTriangle > Canvas.stroke() > cross >
+      gridLines > triangle > Canvas.fill() > smallTriangle > Canvas.stroke() > cross >
         circle > Canvas.stroke()
         > Canvas.withContext(Canvas.setFillStyle('#ffffff') > Canvas.fill())
     ))

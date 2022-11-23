@@ -33,12 +33,10 @@ export class Turtle2DLive implements Turtle2D {
     }))
       .zip(this.state.get)
       .flatMap(([state0, state1]) =>
-        Canvas.withContext(
-          Canvas.beginPath() >
-            Canvas.moveTo({ ...state0 }) >
-            Canvas.lineTo({ ...state1 }) >
-            Canvas.stroke()
-        )
+        (Canvas.beginPath() >
+          Canvas.moveTo({ ...state0 }) >
+          Canvas.lineTo({ ...state1 }) >
+          Canvas.stroke())
           .as(state1)
       )
   }
@@ -68,6 +66,6 @@ export const getLiveLayer = (initial = Turtle2DLive.initialState) =>
     const queue = $(Ref.make(ImmutableQueue.empty()))
     const state = $(Ref.make(initial))
     return new Turtle2DLive(state, queue)
-  }))
+  })).fresh
 
 export const liveLayer = getLiveLayer()

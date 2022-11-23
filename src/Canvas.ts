@@ -87,6 +87,10 @@ export function fillRect({ height, width, x, y }: Rectangle): Render<never, void
 export function withContext<A>(effect: Render<never, A>): Render<never, A> {
   return save() > effect < restore()
 }
+/** @tsplus static Canvas/Ops dimensions */
+export function getDimensions(): Render<never, { width: number; height: number }> {
+  return Effect.service(Canvas.Tag).flatMap((ctx) => Effect.sync(ctx.canvas.getBoundingClientRect()))
+}
 
 /** @tsplus static Canvas/Ops setStrokeStyle */
 export function setStrokeStyle(style: string): Render<never, void> {
@@ -155,3 +159,10 @@ export function renderTo(id: string): Effect<never, Error, CanvasRenderingContex
 }
 /** @tsplus static Canvas/Ops liveLayer */
 export const liveRenderLayer = (id: string) => (renderTo(id).toLayer(Canvas.Tag))
+
+/** @tsplus static Canvas/Ops drawTo */
+export const drawTo = (id: string, program: Effect<CanvasRenderingContext2D, never, void>) =>
+  program
+    .provideSomeLayer(Canvas.liveLayer(id))
+    .provideSomeLayer(Logger.consoleLoggerLayer)
+    .unsafeRunPromise()
