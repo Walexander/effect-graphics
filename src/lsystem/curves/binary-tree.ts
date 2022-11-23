@@ -22,22 +22,25 @@ export const turtleInterpreter: BTreeInterpreter = () =>
       switch (letter) {
         case '0':
           return Canvas.withContext(
-            Canvas.setStrokeStyle('red') >
-              turtle.drawForward(2)
-          ).tap(_ => Effect.log('LEAF forward 2'))
+            Canvas.setStrokeStyle('green') >
+                turtle.drawForward(2) < Canvas.stroke()
+          )
         case '1':
-          return turtle.drawForward(3).tap(_ => Effect.log(`Leaf forward(3)`))
+          return Canvas.setStrokeStyle('orange') >
+            turtle.drawForward(3).delay((1).millis)
+
         case '[':
           return turtle.push() >
-            turtle.turn(45).tap(_ => Effect.log(`turning right`))
+            turtle.turn(45)
         case ']':
           return turtle.pop() >
             turtle.turn(-45)
-              .tap(_ => Effect.log(`turning left`))
       }
     })
 export const binaryTree = (iterations: number) =>
   lsystem(initial, producer, turtleInterpreter, iterations, void null)
-    .provideSomeLayer(getLiveLayer(
-      { x: 0, y: 0, theta: -Math.PI / 2 }
-    ))
+    .provideSomeLayer(
+      getLiveLayer(
+        { x: 0, y: 0, theta: -Math.PI / 2 }
+      )
+    )

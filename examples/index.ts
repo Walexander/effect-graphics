@@ -67,46 +67,23 @@ export const trees = Canvas.withContext(
     binaryTree(6) &
     binaryTree(7)
 )
-// > Canvas.withContext(
-//   Canvas.setStrokeStyle('green') >
-//     Canvas.translate(300, 600) >
-//     Canvas.scale(1.25, 1.25) >
-//     btree(6)
-// )
-// > Canvas.withContext(
-//   Canvas.setStrokeStyle('purple') >
-//     Canvas.translate(300, 600) >
-//     Canvas.scale(1, 1) >
-//     btree(7)
-// )
-// > Canvas.withContext(
-//   Canvas.setStrokeStyle('blue') >
-//     Canvas.translate(300, 600) >
-//     Canvas.scale(0.75, 0.75) >
-//     btree(8)
-// )
 
 const myPlant = Canvas.withContext(
   Canvas.setLineWidth(1) >
     Canvas.setStrokeStyle('hsla(68, 40%, 50%, 0.85)') >
-    Canvas.setFillStyle('hsla(68, 40%, 50%, 0.25)') >
-    Canvas.dimensions().flatMap(({ height, width }) =>
-      Canvas.fillRect({ height, width, x: 0, y: 0 }) >
-        Canvas.translate(50, 450) >
-        Canvas.scale(2.5, 2.5) >
-        plantCurve(5) > Canvas.stroke()
-    )
+    // Canvas.setFillStyle('hsla(68, 40%, 50%, 0.25)') >
+    // Canvas.fillRect({ height, width, x: 0, y: 0 }) >
+    Canvas.translate(50, 575) >
+    plantCurve(6) > Canvas.stroke()
 )
 const kochCurveExample = Canvas.withContext(
-  Canvas.setFillStyle('hsla(0, 0%, 0%, 0.25)') >
-    Canvas.setStrokeStyle('red') >
-    Canvas.dimensions().flatMap(({ height, width }) =>
-      Canvas.fillRect({ height, width, x: 0, y: 0 }) >
-        Canvas.translate(450, 400) >
-        Canvas.scale(1, 1) >
-        diamond(4).zipPar(snowflake(4)) >
-        Canvas.stroke()
-    )
+  // Canvas.setFillStyle('hsla(0, 0%, 0%, 0.25)') >
+  Canvas.setStrokeStyle('red') >
+    // Canvas.fillRect({ height, width, x: 0, y: 0 }) >
+    Canvas.translate(420, 250) >
+    Canvas.scale(1, 1) >
+    diamond(4).zipPar(snowflake(4)) >
+    Canvas.stroke()
 )
 
 export const gridLines = Canvas.dimensions().flatMap(({ height, width }) =>
@@ -159,17 +136,15 @@ export function init() {
     'click',
     () => draw(myPlant)
   )
-  document.getElementById('cross')?.addEventListener('click', () => draw(cross))
-  document.getElementById('circle')?.addEventListener('click', () =>
-    draw(
-      circle > Canvas.stroke()
-        > Canvas.save() > Canvas.setFillStyle('#ffffff') > Canvas.fill() > Canvas.restore()
-    ))
+  // document.getElementById('cross')?.addEventListener('click', () => draw(cross))
+  // document.getElementById('circle')?.addEventListener('click', () =>
+  //   draw(
+  //     circle > Canvas.stroke()
+  //       > Canvas.save() > Canvas.setFillStyle('#ffffff') > Canvas.fill() > Canvas.restore()
+  //   ))
   document.getElementById('clear')?.addEventListener('click', () => draw(gridLines))
-  document.getElementById('all')?.addEventListener('click', () =>
-    draw(
-      gridLines > triangle > Canvas.fill() > smallTriangle > Canvas.stroke() > cross >
-        circle > Canvas.stroke()
-        > Canvas.withContext(Canvas.setFillStyle('#ffffff') > Canvas.fill())
-    ))
+  document.getElementById('all')?.addEventListener(
+    'click',
+    () => Canvas.drawTo('canvas1', (gridLines > kochCurveExample > trees > myPlant) / Canvas.withContext)
+  )
 }

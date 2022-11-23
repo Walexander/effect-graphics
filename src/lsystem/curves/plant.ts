@@ -21,7 +21,7 @@ const plantInterpreter: Interpreter<any, Letter, Turtle2D | CanvasRenderingConte
     Effect.service(Turtle2D).flatMap(turtle => {
       switch (letter) {
         case 'F':
-          return turtle.drawForward(2).delay((1).millis)
+          return turtle.drawForward(4)
         case 'X':
           return Effect.unit
         case '-':

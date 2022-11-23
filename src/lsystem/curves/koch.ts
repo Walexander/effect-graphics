@@ -21,7 +21,7 @@ const interpreter: Interpreter<any, Letter, CanvasRenderingContext2D | Turtle2D>
     Effect.service(Turtle2D).flatMap(turtle => {
       switch (letter) {
         case 'F':
-          return turtle.drawForward(1.5)
+          return turtle.drawForward(3).delay((1).millis)
         case 'L':
           return turtle.turn(-60)
         case 'R':
