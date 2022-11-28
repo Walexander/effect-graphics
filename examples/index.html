@@ -7,8 +7,16 @@
   <body>
     <div style="display: flex; flex-direction: column; row-gap: 1.5rem;">
     <div style="display: flex; align-items: center; flex-direction: column; justify-content: center;" id="root">
+      <div style="display: flex; column-gap: 0.5rem;">
+        <button id=points>Random Points</button>
+      </div>
+      <h3>Points</h3>
+      <textarea style="width: 90%" id="points-json"></textarea>
+      <h3>Hull</h3>
+      <textarea style="width: 90%" id="hull-json"></textarea>
+        <button id="json-points">From JSON</button>
       <h2>Canvas 2</h2>
-      <canvas id="canvas2" width="300" height="300" style="border: 1px solid black;"></canvas>
+      <canvas id="canvas2" width="1024" height="400" style="border: 1px solid black;"></canvas>
     </div>
     <div style="display: flex; align-items: center; flex-direction: column; justify-content: center;" id="root">
       <div style="display: flex; column-gap: 0.5rem;">

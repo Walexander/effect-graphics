@@ -121,6 +121,18 @@ export function beginPath(): Render<never, void> {
     )
   )
 }
+/** @tsplus static Canvas/Ops fillText */
+export function fillText(text: string, { x, y }: Point, maxWidth?: number): Render<never, void> {
+  return Effect.service(Canvas.Tag).tap((ctx) => Effect.sync(() => ctx.fillText(text, x, y, maxWidth)))
+}
+/** @tsplus static Canvas/Ops setFont */
+export function setFont(font: string): Render<never, void> {
+  return Effect.service(Canvas.Tag).tap((ctx) => {
+    ctx.font = font
+    return Effect.unit
+  })
+}
+
 /** @tsplus static Canvas/Ops arc */
 export function arc({ counterclockwise = true, end, radius, start, x, y }: Arc): Render<never, void> {
   return Effect.service(Canvas.Tag).tap(ctx =>

@@ -76,6 +76,7 @@ const myPlant = Canvas.withContext(
     Canvas.translate(50, 575) >
     plantCurve(6) > Canvas.stroke()
 )
+
 const kochCurveExample = Canvas.withContext(
   // Canvas.setFillStyle('hsla(0, 0%, 0%, 0.25)') >
   Canvas.setStrokeStyle('red') >
