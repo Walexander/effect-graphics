@@ -51,59 +51,11 @@ const squaredNumbers = Stream.range(1, 6)
       ))
   )
 
-export const triangle = Effect.logSpan('triangle')(
+export const compositeShape = Effect.logSpan('compositeShape')(
   Effect.log('... starting ...') >
     Canvas.dimensions().flatMap(({ height, width }) =>
       Canvas.withContext(
-        Effect.unit > // Canvas.translate(width / 2, height / 2) >
-          //   Rect(-100 / 2, -150 / 2, 100, 150).toCanvas >
-          //   Canvas.fill() >
-          //   Canvas.withContext(
-          //     Canvas.setFillStyle('white') >
-          //       Arc(0, 0, 25, Angle.degrees(0), Angle.degrees(180)).toCanvas >
-          //       Canvas.stroke() >
-          //       Canvas.fill()
-          //   ) >
-          //   Canvas.withContext(
-          //     Canvas.setFillStyle('green') >
-          //       Arc({
-          //         center: Point2(0, 0),
-          //         radius: 25,
-          //         start: Angle.degrees(0),
-          //         end: Angle.degrees(180),
-          //         counterclockwise: true
-          //       }).toCanvas >
-          //       Canvas.stroke() >
-          //       Canvas.fill()
-          //   )
-          // > Canvas.withContext(
-          //   Canvas.rotate(Angle.degrees(45).radians) >
-          //     Canvas.withContext(
-          //       Path(
-          //         [Point2(0, 0), Point2(100, 100), Point2(100, -100), Point2(0, 0)],
-          //         false
-          //       ).toCanvas >
-          //         Canvas.setStrokeStyle('orange') >
-          //         Canvas.setLineWidth(3) >
-          //         Canvas.stroke()
-          //     ) >
-          //     Canvas.withContext(
-          //       Path(
-          //         [
-          //           Point2(0, 0),
-          //           Point2(100, 100),
-          //           Point2(100, -100),
-          //           Point2(0, 0)
-          //         ].map(_ => _.scale(Point2(-1, -1))),
-          //         false
-          //       ).toCanvas
-          //         > Canvas.setStrokeStyle('purple')
-          //         > Canvas.setFillStyle('purple')
-          //         > Canvas.setLineWidth(10)
-          //         > Canvas.stroke()
-          //     )
-          // )
-          Canvas.translate(300, 300) >
+        Canvas.translate(height / 2 - 50, width / 2 - 50) >
           Canvas.beginPath() >
           composite.toCanvas >
           Canvas.setStrokeStyle('red') >
@@ -111,12 +63,11 @@ export const triangle = Effect.logSpan('triangle')(
       )
     )
 )
-const rect100x100 = Rect(0, 0, 100, 100)
 const composite = Composite([
   Ellipse(
     50,
     50,
-    150,
+    100,
     50 * Math.sqrt(2),
     Angle.degrees(0),
     Angle.degrees(0),
@@ -154,19 +105,6 @@ export const flippedCircle = Canvas.save() >
   circle >
   Canvas.fill() >
   Canvas.restore()
-
-const ctx = Canvas
-const cross = Canvas.withContext(
-  ctx.setFillStyle('gray') >
-    ctx.fillRect(80, 60, 140, 30) >
-    // Matrix transformation
-    ctx.translate(150, 75) >
-    ctx.rotate(Math.PI / 2) >
-    ctx.translate(-150, -75) >
-    // Rotated rectangle
-    ctx.setFillStyle('red') >
-    ctx.fillRect(80, 60, 140, 30)
-)
 
 export const trees = Canvas.withContext(
   (Canvas.setLineWidth(1) >
@@ -212,7 +150,6 @@ function sieve(
     Stream.succeed(prime).concat(
       pipe(
         candidates.drop(1).filter(candidate => candidate % prime != 0),
-        // .tap(candidate => Effect.log(`\t ${candidate} % ${prime} = 0 ? ${candidate % prime == 0}`)),
         sieve
       )
     )
@@ -235,6 +172,7 @@ const makeSpirals = (primes: Chunk<number>, total: number) =>
           )
       )
     )
+
 const paintSpiralTile = (
   n: number,
   s: number,
@@ -270,53 +208,37 @@ export function init() {
     `translate: ${xlate.show} ${(xlate / Point2(0.75, 0.75)).show} ${xlate.divideBy(Point2(2, 2)).show}`
   )
   Canvas.drawTo('canvas1', gridLines)
-  document
-    .getElementById('btree')
-    ?.addEventListener('click', () => draw(triangle))
+  const primeSquare = primes(300).runCollect.flatMap(
+    primes =>
+      Stream.repeat('x')
+        .mapAccum(0, current => [current + 1, Math.max(1, current)])
+        .mapEffect(iteration =>
+          Canvas.withContext(
+            Canvas.scale(scaleVector.x, scaleVector.y) >
+              Canvas.translate(xlate.x, xlate.y) >
+              Canvas.clearRect(
+                clear.x,
+                clear.y,
+                scaledDims.x,
+                scaledDims.y
+              ) >
+              makeSpirals(primes, iteration).runDrain.provideSomeLayer(
+                turtleLayer({ x: 0, y: 0, theta: 0 })
+              )
+          ).delay((1e2).millis)
+        )
+        .take(45).runDrain
+  )
+  const all = (gridLines > kochCurveExample > trees > myPlant) / Canvas.withContext
   document
     .getElementById('koch-snowflake')
     ?.addEventListener('click', () => draw(kochCurveExample))
-  // document.getElementById('btree')?.addEventListener('click', () => draw(trees))
-  document.getElementById('triangle')?.addEventListener('click', () =>
-    draw(
-      primes(300).runCollect.flatMap(
-        primes =>
-          Stream.repeat('x')
-            .mapAccum(0, current => [current + 1, Math.max(1, current)])
-            .mapEffect(iteration =>
-              Canvas.withContext(
-                Canvas.scale(scaleVector.x, scaleVector.y) >
-                  Canvas.translate(xlate.x, xlate.y) >
-                  Canvas.clearRect(
-                    clear.x,
-                    clear.y,
-                    scaledDims.x,
-                    scaledDims.y
-                  ) >
-                  makeSpirals(primes, iteration).runDrain.provideSomeLayer(
-                    turtleLayer({ x: 0, y: 0, theta: 0 })
-                  )
-              ).delay((1e2).millis)
-            )
-            .take(45).runDrain
-      )
-    ))
-  // document.getElementById('cross')?.addEventListener('click', () => draw(cross))
-  // document.getElementById('circle')?.addEventListener('click', () =>
-  //   draw(
-  //     circle > Canvas.stroke()
-  //       > Canvas.save() > Canvas.setFillStyle('#ffffff') > Canvas.fill() > Canvas.restore()
-  //   ))
-  document
-    .getElementById('clear')
-    ?.addEventListener('click', () => draw(gridLines))
-  document
-    .getElementById('all')
-    ?.addEventListener('click', () =>
-      Canvas.drawTo(
-        'canvas1',
-        (gridLines > kochCurveExample > trees > myPlant) / Canvas.withContext
-      ))
+  document.getElementById('btree')?.addEventListener('click', () => draw(trees))
+  document.getElementById('shapes')?.addEventListener('click', () => draw(compositeShape))
+  document.getElementById('plant')?.addEventListener('click', () => draw(myPlant))
+  document.getElementById('prime-squares')?.addEventListener('click', () => draw(primeSquare))
+  document.getElementById('clear')?.addEventListener('click', () => draw(gridLines))
+  document.getElementById('all')?.addEventListener('click', () => draw(all))
 }
 
 const rotateDrawing = (drawing: Render<never, any>, rotation: Angle) =>

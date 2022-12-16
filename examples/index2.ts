@@ -209,7 +209,7 @@ export const init2 = () => {
 
   const updatePoints = (points: HashSet<Point>) =>
     clearCanvas
-      > updateTextArea('points-json', JSON.stringify(points)).orDie
+      > updateTextArea('points-json', JSON.stringify(points.toArray)).orDie
       > drawHull2(HashSet.from(points))
         .flatMap(_ =>
           updateTextArea('hull-json', JSON.stringify(_))

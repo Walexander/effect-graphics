@@ -17,15 +17,14 @@ export function initStream() {
 
   // const CountTag = Service.Tag<Ref<number>>()
   const PairCount = Service.Tag<Ref<[number, number]>>()
-  const fibstream = Stream.fromEffect(
+  Stream.fromEffect(
     Effect.service(PairCount)
       .flatMap((env) => env.getAndUpdate(([a, b]) => [b, a + b]))
   ).forever
-  ;(fibstream
     .take(35)
     .runLast
     .map(_ => _.getOrElse(() => [0, 0] as const))
-    .map(([a, b]) => a + b))
+    .map(([a, b]) => a + b)
     .timed
     .tap(([d, value]) => Effect.log(`fib(25) = ${value} duration ${d.millis}ms`))
     .provideSomeLayer(Logger.consoleLoggerLayer)
