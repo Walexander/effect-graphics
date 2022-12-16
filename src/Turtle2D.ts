@@ -1,4 +1,4 @@
-import { Canvas } from './Canvas'
+import { Canvas } from 'effect-canvas/Canvas'
 
 interface TurtleState {
   x: number
@@ -11,6 +11,7 @@ type CurrentTurtleState = Ref<TurtleState>
 type QueueRef = Ref<TurtleQueue>
 type Dependencies = CanvasRenderingContext2D
 
+/** @tsplus type effect/canvas/Turtle2D */
 export interface Turtle2D {
   drawForward(length: number): Effect<Dependencies, never, TurtleState>
   push(): Effect<Dependencies, never, void>
@@ -33,10 +34,10 @@ export class Turtle2DLive implements Turtle2D {
     }))
       .zip(this.state.get)
       .flatMap(([state0, state1]) =>
-        (Canvas.beginPath() >
-          Canvas.moveTo({ ...state0 }) >
-          Canvas.lineTo({ ...state1 }) >
-          Canvas.stroke())
+        (Canvas.beginPath()
+          > Canvas.moveTo(state0.x, state0.y)
+          > Canvas.lineTo(state1.x, state1.y)
+          > Canvas.stroke())
           .as(state1)
       )
   }

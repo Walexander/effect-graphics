@@ -1,13 +1,5 @@
 export type UIO<A> = Effect<never, never, A>
 export type Render<E, A> = Effect<CanvasRenderingContext2D, E, A>
-export interface Point {
-  x: number
-  y: number
-}
-export interface Rectangle extends Point {
-  width: number
-  height: number
-}
 export declare namespace Canvas {
   export type Tag = Canvas['Tag']
 }
@@ -28,22 +20,22 @@ export const Canvas: CanvasOps = {
 }
 
 /** @tsplus static Canvas/Ops moveTo */
-export function moveTo(point: Point): Render<never, void> {
-  return Effect.service(Canvas.Tag).tap(ctx => Effect.succeed(ctx.moveTo(point.x, point.y)))
+export function moveTo(x: number, y: number): Render<never, void> {
+  return Effect.service(Canvas.Tag).tap(ctx => Effect.sync(() => ctx.moveTo(x, y)))
 }
 /** @tsplus static Canvas/Ops lineTo */
-export function lineTo(point: Point): Render<never, void> {
-  return Effect.service(Canvas.Tag).tap(ctx => Effect.succeed(ctx.lineTo(point.x, point.y)))
+export function lineTo(x: number, y: number): Render<never, void> {
+  return Effect.service(Canvas.Tag).tap(ctx => Effect.sync(() => ctx.lineTo(x, y)))
 }
 
 /** @tsplus static Canvas/Ops stroke */
 export function stroke(): Render<never, void> {
-  return Effect.service(Canvas.Tag).tap(ctx => Effect.succeed(ctx.stroke()))
+  return Effect.service(Canvas.Tag).tap(ctx => Effect.sync(() => ctx.stroke()))
 }
 
 /** @tsplus static Canvas/Ops closePath */
 export function closePath(): Render<never, void> {
-  return Effect.service(Canvas.Tag).tap(ctx => Effect.succeed(ctx.closePath()))
+  return Effect.service(Canvas.Tag).tap(ctx => Effect.sync(() => ctx.closePath()))
 }
 export interface Arc {
   x: number
@@ -55,32 +47,54 @@ export interface Arc {
 }
 /** @tsplus static Canvas/Ops fill */
 export function fill(): Render<never, void> {
-  return Effect.service(Canvas.Tag).tap(ctx => Effect.succeed(ctx.fill()))
+  return Effect.service(Canvas.Tag).tap(ctx => Effect.sync(() => ctx.fill()))
 }
 /** @tsplus static Canvas/Ops save */
 export function save(): Render<never, void> {
-  return Effect.service(Canvas.Tag).tap(ctx => Effect.succeed(ctx.save()))
+  return Effect.service(Canvas.Tag).tap(ctx => Effect.sync(() => ctx.save()))
 }
 /** @tsplus static Canvas/Ops restore */
 export function restore(): Render<never, void> {
-  return Effect.service(Canvas.Tag).tap(ctx => Effect.succeed(ctx.restore()))
+  return Effect.service(Canvas.Tag).tap(ctx => Effect.sync(() => ctx.restore()))
 }
 /** @tsplus static Canvas/Ops scale */
 export function scale(x: number, y: number): Render<never, void> {
-  return Effect.service(Canvas.Tag).tap(ctx => Effect.succeed(ctx.scale(x, y)))
+  return Effect.service(Canvas.Tag).tap(ctx => Effect.sync(() => ctx.scale(x, y)))
 }
 /** @tsplus static Canvas/Ops rotate */
 export function rotate(angle: number): Render<never, void> {
-  return Effect.service(Canvas.Tag).tap(ctx => Effect.succeed(ctx.rotate(angle)))
+  return Effect.service(Canvas.Tag).tap(ctx => Effect.sync(() => ctx.rotate(angle)))
 }
 /** @tsplus static Canvas/Ops translate */
 export function translate(x: number, y: number): Render<never, void> {
-  return Effect.service(Canvas.Tag).tap(ctx => Effect.succeed(ctx.translate(x, y)))
+  return Effect.service(Canvas.Tag).tap(ctx => Effect.sync(() => ctx.translate(x, y)))
 }
+
 /** @tsplus static Canvas/Ops fillRect */
-export function fillRect({ height, width, x, y }: Rectangle): Render<never, void> {
+export function fillRect(x: number, y: number, width: number, height: number): Render<never, void> {
   return Effect.service(Canvas.Tag).tap(ctx => {
-    return Effect.succeed(ctx.fillRect(x, y, width, height))
+    return Effect.sync(() => ctx.fillRect(x, y, width, height))
+  })
+}
+/** @tsplus static Canvas/Ops rect */
+export function rect(x: number, y: number, width: number, height: number): Render<never, void> {
+  return Effect.service(Canvas.Tag).tap(ctx => {
+    return Effect.sync(() => ctx.rect(x, y, width, height))
+  })
+}
+/** @tsplus static Canvas/Ops ellipse */
+export function ellipse(
+  x: number,
+  y: number,
+  radiusX: number,
+  radiusY: number,
+  rotation: number,
+  startAngle: number,
+  endAngle: number,
+  counterclockwise = false
+): Render<never, void> {
+  return Effect.service(Canvas.Tag).tap(ctx => {
+    return Effect.sync(ctx.ellipse(x, y, radiusX, radiusY, rotation, startAngle, endAngle, counterclockwise))
   })
 }
 /** @tsplus static Canvas/Ops withContext */
@@ -89,7 +103,7 @@ export function withContext<A>(effect: Render<never, A>): Render<never, A> {
 }
 /** @tsplus static Canvas/Ops dimensions */
 export function getDimensions(): Render<never, { width: number; height: number }> {
-  return Effect.service(Canvas.Tag).flatMap((ctx) => Effect.sync(ctx.canvas.getBoundingClientRect()))
+  return Effect.service(Canvas.Tag).flatMap((ctx) => Effect.sync(() => ctx.canvas.getBoundingClientRect()))
 }
 
 /** @tsplus static Canvas/Ops setStrokeStyle */
@@ -106,6 +120,12 @@ export function setLineWidth(width: number): Render<never, void> {
     return Effect.unit
   })
 }
+/** @tsplus static Canvas/Ops lineWidth */
+export function getLineWidth(): Render<never, void> {
+  return Effect.service(Canvas.Tag).tap(ctx => {
+    return Effect.sync(() => ctx.lineWidth)
+  })
+}
 /** @tsplus static Canvas/Ops setFillStyle */
 export function setFillStyle(style: string): Render<never, void> {
   return Effect.service(Canvas.Tag).tap(ctx => {
@@ -116,38 +136,41 @@ export function setFillStyle(style: string): Render<never, void> {
 /** @tsplus static Canvas/Ops beginPath */
 export function beginPath(): Render<never, void> {
   return Effect.service(Canvas.Tag).tap(ctx =>
-    Effect.succeed(
-      ctx.beginPath()
+    Effect.sync(
+      () => ctx.beginPath()
     )
   )
 }
 /** @tsplus static Canvas/Ops fillText */
-export function fillText(text: string, { x, y }: Point, maxWidth?: number): Render<never, void> {
-  return Effect.service(Canvas.Tag).tap((ctx) => Effect.sync(() => ctx.fillText(text, x, y, maxWidth)))
+export function fillText(
+  text: string,
+  x: number,
+  y: number,
+  maxWidth?: number
+): Render<never, void> {
+  return Effect.service(Canvas.Tag).tap(ctx => Effect.sync(() => ctx.fillText(text, x, y, maxWidth)))
 }
 /** @tsplus static Canvas/Ops setFont */
 export function setFont(font: string): Render<never, void> {
   return Effect.service(Canvas.Tag).tap((ctx) => {
-    ctx.font = font
-    return Effect.unit
+    return Effect.sync(() => ctx.font = font)
   })
 }
 
 /** @tsplus static Canvas/Ops arc */
-export function arc({ counterclockwise = true, end, radius, start, x, y }: Arc): Render<never, void> {
-  return Effect.service(Canvas.Tag).tap(ctx =>
-    Effect.succeed(
-      ctx.arc(x, y, radius, start, end, counterclockwise)
-    )
-  )
+export function arc(
+  x: number,
+  y: number,
+  radius: number,
+  start: number,
+  end: number,
+  counterclockwise = false
+): Render<never, void> {
+  return Effect.service(Canvas.Tag).tap(ctx => Effect.sync(() => ctx.arc(x, y, radius, start, end, counterclockwise)))
 }
 /** @tsplus static Canvas/Ops clearRect */
-export function clearRect({ height, width, x, y }: Rectangle): Render<never, void> {
-  return Effect.service(Canvas.Tag).tap(ctx =>
-    Effect.succeed(
-      ctx.clearRect(x, y, width, height)
-    )
-  )
+export function clearRect(x: number, y: number, width: number, height: number): Render<never, void> {
+  return Effect.service(Canvas.Tag).tap(ctx => Effect.sync(() => ctx.clearRect(x, y, width, height)))
 }
 
 /** @tsplus static Canvas/Ops renderTo */

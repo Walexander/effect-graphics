@@ -1,3 +1,3 @@
-export * from './curves/binary-tree'
-export * from './curves/koch'
-export * from './curves/plant'
+export * from 'effect-canvas/lsystem/curves/binary-tree'
+export * from 'effect-canvas/lsystem/curves/koch'
+export * from 'effect-canvas/lsystem/curves/plant'

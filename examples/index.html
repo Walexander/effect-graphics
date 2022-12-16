@@ -6,18 +6,28 @@
   </head>
   <body>
     <div style="display: flex; flex-direction: column; row-gap: 1.5rem;">
-    <div style="display: flex; align-items: center; flex-direction: column; justify-content: center;" id="root">
-      <div style="display: flex; column-gap: 0.5rem;">
-        <button id=points>Random Points</button>
+      <div style="display: flex; align-items: center; flex-direction: column; justify-content: center;" id="root">
+        <div style="display: flex; column-gap: 0.5rem;">
+          <button id=tick>Tick</button>
+          <input type=number id=point-count value=25> points</input>
+          <button id=boom>Boom</button>
+          <button id=points>Boom Tick</button>
+          <button id="json-points">From JSON</button>
+          <button id="start">Start</button>
+          <button id="restart">Reset</button>
+        </div>
+        <div style="display: flex; column-gap: 0.5rem;">
+          <div>
+            <h3>Total Points <span id=points-size>0</span></h3>
+            <textarea style="min-width: 24rem" id="points-json"></textarea>
+          </div>
+          <div>
+            <h3>Hull Size <span id=hull-size>0</span></h3>
+            <textarea style="min-width: 24rem" id="hull-json"></textarea>
+          </div>
+        </div>
+        <canvas id="canvas2" width="1024" height="600" style="border: 1px solid black;"></canvas>
       </div>
-      <h3>Points</h3>
-      <textarea style="width: 90%" id="points-json"></textarea>
-      <h3>Hull</h3>
-      <textarea style="width: 90%" id="hull-json"></textarea>
-        <button id="json-points">From JSON</button>
-      <h2>Canvas 2</h2>
-      <canvas id="canvas2" width="1024" height="400" style="border: 1px solid black;"></canvas>
-    </div>
     <div style="display: flex; align-items: center; flex-direction: column; justify-content: center;" id="root">
       <div style="display: flex; column-gap: 0.5rem;">
         <button id=btree>Binary Tree</button>
@@ -32,8 +42,7 @@
     </div>
     </div>
     <script type=module>
-      import { init } from '../dist/index.js'
-      import { init2 } from '../dist/index2.js'
+      import { init, init2 } from '../dist/index.js'
       init()
       init2()
     </script>

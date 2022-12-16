@@ -1,7 +1,8 @@
 {
     "importMap": {
         "^(.*)\/src(.*)/index\\.ts$": "effect-canvas$2",
-        "^(.*)\/src(.*)\\.ts$": "effect-canvas$2"
+        "^(.*)\/src(.*)\\.ts$": "effect-canvas$2",
+        "^(.*)\/test(.*)\\.ts$": "effect-canvas$2"
     },
     "traceMap": {
         "^(.*)\/(.*)\\.ts$": "(effect-canvas/$2)"

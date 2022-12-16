@@ -1,6 +1,6 @@
-import { getLiveLayer, Turtle2D } from '../../Turtle2D'
-import type { Interpreter, Productions } from '../definition'
-import { lsystem } from '../definition'
+import type { Interpreter, Productions } from 'effect-canvas/lsystem/definition'
+import { lsystem } from 'effect-canvas/lsystem/definition'
+import { getLiveLayer, Turtle2D } from 'effect-canvas/Turtle2D'
 
 type Letter = 'F' | 'L' | 'R'
 type Sentence = Array<Letter>

@@ -1,7 +1,7 @@
-import { Canvas } from '../../Canvas'
-import { getLiveLayer, Turtle2D } from '../../Turtle2D'
-import type { Interpreter, Productions } from '../definition'
-import { lsystem } from '../definition'
+import { Canvas } from 'effect-canvas/Canvas'
+import type { Interpreter, Productions } from 'effect-canvas/lsystem/definition'
+import { lsystem } from 'effect-canvas/lsystem/definition'
+import { getLiveLayer, Turtle2D } from 'effect-canvas/Turtle2D'
 
 type Letter = '0' | '1' | '[' | ']'
 export const initial: Letter[] = ['0']

@@ -1,2 +1,2 @@
-export * as curves from './lsystem/curves'
-export * from './lsystem/definition'
+export * as curves from 'effect-canvas/lsystem/curves'
+export * from 'effect-canvas/lsystem/definition'
