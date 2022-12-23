@@ -1,6 +1,6 @@
-import type { Interpreter, Productions } from 'effect-canvas/lsystem/definition'
+import type { Interpreter } from 'effect-canvas/lsystem/definition'
 import { lsystem } from 'effect-canvas/lsystem/definition'
-import { getLiveLayer, Turtle2D } from 'effect-canvas/Turtle2D'
+import { Turtle2D } from 'effect-canvas/Turtle2D'
 
 export type Letter = 'X' | 'F' | '+' | '-' | '[' | ']'
 type Sentence = Letter[]
@@ -18,7 +18,7 @@ const producer = (letter: Letter): Sentence => {
 }
 const plantInterpreter: Interpreter<any, Letter, Turtle2D | CanvasRenderingContext2D> = () =>
   (letter) =>
-    Effect.service(Turtle2D).flatMap(turtle => {
+    Effect.service(Turtle2D.Tag).flatMap(turtle => {
       switch (letter) {
         case 'F':
           return turtle.drawForward(4)
@@ -37,5 +37,5 @@ const plantInterpreter: Interpreter<any, Letter, Turtle2D | CanvasRenderingConte
 
 export const plant = (iterations: number) =>
   lsystem(initial, producer, plantInterpreter, iterations, void null).provideSomeLayer(
-    getLiveLayer({ x: 0, y: 0, theta: (-30 / 180) * Math.PI })
+    Turtle2D.liveLayer({ x: 0, y: 0, theta: (-30 / 180) * Math.PI })
   )

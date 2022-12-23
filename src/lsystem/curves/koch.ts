@@ -1,6 +1,6 @@
 import type { Interpreter, Productions } from 'effect-canvas/lsystem/definition'
 import { lsystem } from 'effect-canvas/lsystem/definition'
-import { getLiveLayer, Turtle2D } from 'effect-canvas/Turtle2D'
+import { Turtle2D } from 'effect-canvas/Turtle2D'
 
 type Letter = 'F' | 'L' | 'R'
 type Sentence = Array<Letter>
@@ -18,7 +18,7 @@ const producer: Productions<Letter> = (letter: Letter): Sentence => {
 
 const interpreter: Interpreter<any, Letter, CanvasRenderingContext2D | Turtle2D> = () =>
   (letter) =>
-    Effect.service(Turtle2D).flatMap(turtle => {
+    Effect.service(Turtle2D.Tag).flatMap(turtle => {
       switch (letter) {
         case 'F':
           return turtle.drawForward(3).delay((1).millis)
@@ -30,10 +30,10 @@ const interpreter: Interpreter<any, Letter, CanvasRenderingContext2D | Turtle2D>
     })
 export const diamond = (iterations: number) =>
   lsystem(initial, producer, interpreter, iterations, void null).provideSomeLayer(
-    getLiveLayer({ x: 0, y: 0, theta: Math.PI })
+    Turtle2D.liveLayer({ x: 0, y: 0, theta: Math.PI })
   )
 const initialSnowflake = 'FRRFRRFRR'.split('') as Sentence
 export const snowflake = (iterations: number) =>
   lsystem(initialSnowflake, producer, interpreter, iterations, void null).provideSomeLayer(
-    getLiveLayer({ x: 0, y: 0, theta: Math.PI })
+    Turtle2D.liveLayer({ x: 0, y: 0, theta: Math.PI })
   )

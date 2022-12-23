@@ -8,6 +8,17 @@
     <div style="display: flex; flex-direction: column; row-gap: 1.5rem;">
       <div style="display: flex; align-items: center; flex-direction: column; justify-content: center;" id="root">
         <div style="display: flex; column-gap: 0.5rem;">
+          <div>
+          <label for="limit">Speed Limit</label><input style="width:4rem;" type="number" name="limit" value="0.5" id="limit"/>
+          </div>
+          <button id=boidy>Step-wise</button>
+          <button id=toggle>Pause</button>
+          <button id=stateful>Start</button>
+        </div>
+        <canvas id="canvas3" width="1024" height="600" style="border: 1px solid black;"></canvas>
+      </div>
+      <div style="display: flex; align-items: center; flex-direction: column; justify-content: center;" id="root">
+        <div style="display: flex; column-gap: 0.5rem;">
           <input type=number style="width:2rem" id=point-count value=5> points</input>
           <button id=tick>Add</button>
           <button id=boom>Clear</button>

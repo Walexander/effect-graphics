@@ -13,7 +13,7 @@ export default [
     ]
   },
   {
-    input: './build/examples/index2.js',
+    input: './build/examples/index3.js',
     output: {
       dir: './dist'
     },

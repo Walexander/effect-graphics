@@ -11,7 +11,7 @@ type CurrentTurtleState = Ref<TurtleState>
 type QueueRef = Ref<TurtleQueue>
 type Dependencies = CanvasRenderingContext2D
 
-/** @tsplus type effect/canvas/Turtle2D */
+/** @tsplus type effect/Turtle2D */
 export interface Turtle2D {
   drawForward(length: number): Effect<Dependencies, never, TurtleState>
   push(): Effect<Dependencies, never, void>
@@ -19,7 +19,13 @@ export interface Turtle2D {
   turn(degrees: number): Effect<Dependencies, never, TurtleState>
 }
 
-export const Turtle2D = Service.Tag<Turtle2D>()
+/** @tsplus type effect/Turtle2DOps */
+export interface Turtle2DOps {
+  Tag: Service.Tag<Turtle2D>
+}
+export const Turtle2D: Turtle2DOps = {
+  Tag: Service.Tag<Turtle2D>()
+}
 
 export class Turtle2DLive implements Turtle2D {
   static initialState: TurtleState = { x: 0, y: 0, theta: 0 }
@@ -62,11 +68,12 @@ export class Turtle2DLive implements Turtle2D {
   }
 }
 
-export const getLiveLayer = (initial = Turtle2DLive.initialState) =>
-  Layer.fromEffect(Turtle2D)(Do(($) => {
+/** @tsplus static effect/Turtle2DOps liveLayer */
+export const getLiveTurtle2D = (initial = Turtle2DLive.initialState) =>
+  Layer.fromEffect(Turtle2D.Tag)(Do(($) => {
     const queue = $(Ref.make(ImmutableQueue.empty()))
     const state = $(Ref.make(initial))
     return new Turtle2DLive(state, queue)
   })).fresh
 
-export const liveLayer = getLiveLayer()
+export const liveLayer = getLiveTurtle2D()

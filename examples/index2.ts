@@ -1,8 +1,11 @@
 import { convexHull } from 'effect-canvas/algorithms'
 import { Canvas } from 'effect-canvas/Canvas'
+import { DomLive, domLive } from 'effect-canvas/services/Dom'
+import type { Shape } from 'effect-canvas/Shapes'
 import { Arc, Point } from 'effect-canvas/Shapes'
 import { Angle } from 'effect-canvas/Units'
 
+import { drawBoid } from './boids'
 import { game } from './game'
 import { gridLines } from './grid-lines'
 
@@ -87,6 +90,34 @@ const drawRandomPoints2 = (points: HashSet<Point>) =>
   gridLines >
     drawHull2(points).tap(_ => updateTextArea('points-json', JSON.stringify(_)).orDie)
 
+const element = (id: string) =>
+  Effect.sync(() => document.getElementById(id)).map(Maybe.fromNullable).flatMap(Effect.fromMaybe)
+
+export function clickStream(el: string): Stream<never, Maybe<never>, MouseEvent> {
+  return pipe(
+    element(el),
+    Stream.fromEffect,
+    Stream.$.flatMap(element => addHandlerI(element)('click', (event) => event)),
+    Stream.$.filter((_): _ is MouseEvent => _ instanceof MouseEvent),
+    Stream.$.ensuring(Effect.log(`this stream is finalized!!`))
+  )
+
+  function addHandlerI(element: HTMLElement) {
+    return (<A>(event: string, handler: (event: Event) => A) =>
+      Stream.asyncInterrupt<never, never, A>(emit => {
+        const handler$ = (event: Event) =>
+          pipe(
+            handler(event),
+            Chunk.single,
+            Effect.succeed,
+            emit
+          )
+        element.addEventListener(event, handler$)
+        return Either.left(Effect.sync(() => element.removeEventListener(event, handler$)))
+      }))
+  }
+}
+
 export const init2 = () => {
   const decoder = Derive<Decoder<Point[]>>()
   document.getElementById('json-points')?.addEventListener('click', async () => {
@@ -115,10 +146,6 @@ export const init2 = () => {
 
   const isInput: Refinement<HTMLElement, HTMLInputElement> = (el): el is HTMLInputElement =>
     el instanceof HTMLInputElement
-
-  const element = (id: string) =>
-    Effect.sync(() => document.getElementById(id)).map(Maybe.fromNullable).flatMap(Effect.fromMaybe)
-
   const setText = (id: string, text: string) => element(id).flatMap(_ => Effect.sync(() => _.innerText = text)).orDie
 
   const addHandler = (element: HTMLElement) =>
@@ -143,12 +170,6 @@ export const init2 = () => {
       Effect.$.flatMap((_) => Effect.fromMaybe(Maybe.fromPredicate(_, isInput))),
       Stream.fromEffect,
       Stream.$.flatMap(element => addHandlerM(element)('change', () => getValue(element)))
-    )
-  const clickStream = (el: string) =>
-    pipe(
-      Effect.log(`getting element ${el}`) > element(el),
-      Stream.fromEffect,
-      Stream.$.flatMap(element => addHandler(element)('click', (event) => event))
     )
   const _tickstream = clickStream('tick')
     .debounce((100).millis)
@@ -176,13 +197,6 @@ export const init2 = () => {
     > Canvas.closePath()
 
   const angleProgress = (percent: number) =>
-    (percent % 10 == 0 ?
-      Effect.log(
-        `Percent finished ${percent}% -- angle in degrees = ${Angle.degrees((360 * percent) / 100).degrees}° => ${
-          percent - 2
-        } `
-      ) :
-      Effect.unit) &
     Canvas.beginPath()
       > Canvas.moveTo(0, 0)
       > Canvas.lineTo(100, 0 // Math.cos(Math.PI * 2 * (percent / 100)),
@@ -216,15 +230,11 @@ export const init2 = () => {
             > setText('hull-size', _.length.toFixed())
             > setText('points-size', points.size.toFixed())
         ).orDie
-
   void _tickstream
     .mapEffect(updatePoints)
-    .runDrain
-    .orDie
-    .zipPar(
-      _boomstream.mapEffect(_ =>
-        setText('hull-size', '0')
-          > setText('points-size', '0')
+    .runDrain.orDie.zipPar(
+      _boomstream.mapEffect(
+        _ => setText('hull-size', '0') > setText('points-size', '0')
       ).runDrain.fork
     )
     .zipPar(_pointStream.runDrain)
@@ -232,6 +242,11 @@ export const init2 = () => {
     .zipPar(_incrementStream.runDrain.zipLeft(Effect.log(`DONE with circles`)))
     .zipPar(clickStream('restart').runDrain)
     .zipPar(progressCircle(0))
-    .provideSomeLayer(refLayer + pointLayer + Logger.consoleLoggerLayer + Canvas.liveLayer('canvas2').orDie)
+    .provideSomeLayer(
+      refLayer +
+        pointLayer +
+        Logger.consoleLoggerLayer +
+        Canvas.liveLayer('canvas2').orDie
+    )
     .unsafeRunSyncExit()
 }

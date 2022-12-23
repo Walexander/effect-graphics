@@ -30,6 +30,6 @@ export function compositeFromList(shapes: Collection<Shape>) {
 export function compositeToCanvas(self: Composite) {
   return Effect.forEachDiscard<CanvasRenderingContext2D, never, Shape, void>(
     self.shapes,
-    shape => Effect.log(`rendering ${JSON.stringify(shape)}`) > ShapeRenderable.draw(shape)
+    shape => ShapeRenderable.draw(shape)
   )
 }

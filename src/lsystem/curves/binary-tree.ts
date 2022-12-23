@@ -1,7 +1,7 @@
 import { Canvas } from 'effect-canvas/Canvas'
 import type { Interpreter, Productions } from 'effect-canvas/lsystem/definition'
 import { lsystem } from 'effect-canvas/lsystem/definition'
-import { getLiveLayer, Turtle2D } from 'effect-canvas/Turtle2D'
+import { Turtle2D } from 'effect-canvas/Turtle2D'
 
 type Letter = '0' | '1' | '[' | ']'
 export const initial: Letter[] = ['0']
@@ -18,7 +18,7 @@ export const producer: Productions<Letter> = (l) => {
 type BTreeInterpreter = Interpreter<any, Letter, CanvasRenderingContext2D | Turtle2D>
 export const turtleInterpreter: BTreeInterpreter = () =>
   (letter) =>
-    Effect.service(Turtle2D).flatMap(turtle => {
+    Effect.service(Turtle2D.Tag).flatMap(turtle => {
       switch (letter) {
         case '0':
           return Canvas.withContext(
@@ -40,7 +40,7 @@ export const turtleInterpreter: BTreeInterpreter = () =>
 export const binaryTree = (iterations: number) =>
   lsystem(initial, producer, turtleInterpreter, iterations, void null)
     .provideSomeLayer(
-      getLiveLayer(
+      Turtle2D.liveLayer(
         { x: 0, y: 0, theta: -Math.PI / 2 }
       )
     )
