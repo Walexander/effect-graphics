@@ -2,15 +2,15 @@ type F<A> = Effect<never, never, A>
 /** @tsplus type graphics/Dom */
 export interface Dom {
   appendToBody(canvas: HTMLCanvasElement): F<void>
-  renderLoop<A>(
+  renderLoop<A, R>(
     seed: A,
-    callback: <R>(next: A, time: GameTime) => Effect<R, unknown, A>
-  ): Effect<unknown, unknown, void>
+    callback: (next: A, time: GameTime) => Effect<R, unknown, A>
+  ): Effect<R, unknown, void>
 
   keydown: Stream<never, never, KeyboardEvent>
   keyup: Stream<never, never, KeyboardEvent>
 }
-
+export const Dom = Service.Tag<Dom>()
 export interface GameTime {
   now: number
   elapsed: number
@@ -78,3 +78,4 @@ const animationFrameStream = Stream.asyncInterrupt<never, never, number>(
 export const domLive = Ref.make(() => [0, 0] as const)
   .zip(Effect.sync(() => window.document))
   .map(([ref, dom]) => new DomLive(dom, ref))
+  .toLayer(Dom)

@@ -34,8 +34,8 @@ module.exports = {
           'semiColons': 'asi',
           'quoteStyle': 'alwaysSingle',
           'trailingCommas': 'never',
-          'operatorPosition': 'maintain',
-          'useParentheses': 'preferNone'
+          'operatorPosition': 'nextLine',
+          'useParentheses': 'prosferNone'
         }
       }
     ],

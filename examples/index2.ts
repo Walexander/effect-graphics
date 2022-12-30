@@ -1,11 +1,8 @@
 import { convexHull } from 'effect-canvas/algorithms'
 import { Canvas } from 'effect-canvas/Canvas'
-import { DomLive, domLive } from 'effect-canvas/services/Dom'
-import type { Shape } from 'effect-canvas/Shapes'
 import { Arc, Point } from 'effect-canvas/Shapes'
 import { Angle } from 'effect-canvas/Units'
 
-import { drawBoid } from './boids'
 import { game } from './game'
 import { gridLines } from './grid-lines'
 
@@ -90,7 +87,7 @@ const drawRandomPoints2 = (points: HashSet<Point>) =>
   gridLines >
     drawHull2(points).tap(_ => updateTextArea('points-json', JSON.stringify(_)).orDie)
 
-const element = (id: string) =>
+export const element = (id: string) =>
   Effect.sync(() => document.getElementById(id)).map(Maybe.fromNullable).flatMap(Effect.fromMaybe)
 
 export function clickStream(el: string): Stream<never, Maybe<never>, MouseEvent> {
@@ -101,23 +98,22 @@ export function clickStream(el: string): Stream<never, Maybe<never>, MouseEvent>
     Stream.$.filter((_): _ is MouseEvent => _ instanceof MouseEvent),
     Stream.$.ensuring(Effect.log(`this stream is finalized!!`))
   )
-
-  function addHandlerI(element: HTMLElement) {
-    return (<A>(event: string, handler: (event: Event) => A) =>
-      Stream.asyncInterrupt<never, never, A>(emit => {
-        const handler$ = (event: Event) =>
-          pipe(
-            handler(event),
-            Chunk.single,
-            Effect.succeed,
-            emit
-          )
-        element.addEventListener(event, handler$)
-        return Either.left(Effect.sync(() => element.removeEventListener(event, handler$)))
-      }))
-  }
 }
 
+export function addHandlerI(element: HTMLElement) {
+  return (<A>(event: string, handler: (event: Event) => A) =>
+    Stream.asyncInterrupt<never, never, A>(emit => {
+      const handler$ = (event: Event) =>
+        pipe(
+          handler(event),
+          Chunk.single,
+          Effect.succeed,
+          emit
+        )
+      element.addEventListener(event, handler$)
+      return Either.left(Effect.sync(() => element.removeEventListener(event, handler$)))
+    }))
+}
 export const init2 = () => {
   const decoder = Derive<Decoder<Point[]>>()
   document.getElementById('json-points')?.addEventListener('click', async () => {

@@ -35,3 +35,12 @@ export const plusAngle = (addend: Angle) => (augend: Angle) => Angle({ radians: 
  * @tsplus getter graphics/Angle degrees
  */
 export const toDegrees = (self: Angle) => self.radians * (180 / Math.PI)
+
+/**
+ * @tsplus getter graphics/Angle cos
+ */
+export const cosineAngle = (self: Angle) => Math.cos(self.radians)
+/**
+ * @tsplus getter graphics/Angle sin
+ */
+export const sineAngle = (self: Angle) => Math.sin(self.radians)

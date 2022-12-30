@@ -1,34 +1,49 @@
-initStream()
-export function initStream() {
-  // const stream = Stream.fromSchedule(Schedule.fixed((100).millis))
-  // const s1 = Stream.range(1, 9).zip(Stream.range(1, 10))
-  //   .tap(
-  //     ([a, b]) => Effect.log(`${a} + ${b}`)
-  //   )
-  //   .map(([a, b]) => [b, a + b] as const)
+import { Point } from 'effect-canvas/Shapes'
 
-  // const e = Stream.async<never, never, number>((emit) => {
-  //   let c = 0
-  //   document.getElementById('clear')?.addEventListener('click', () => {
-  //     c = c + 1
-  //     emit.single(c)
-  //   })
-  // })
+import { addInCircle } from './boids'
 
-  // const CountTag = Service.Tag<Ref<number>>()
-  const PairCount = Service.Tag<Ref<[number, number]>>()
-  Stream.fromEffect(
-    Effect.service(PairCount)
-      .flatMap((env) => env.getAndUpdate(([a, b]) => [b, a + b]))
-  ).forever
-    .take(35)
-    .runLast
-    .map(_ => _.getOrElse(() => [0, 0] as const))
-    .map(([a, b]) => a + b)
-    .timed
-    .tap(([d, value]) => Effect.log(`fib(25) = ${value} duration ${d.millis}ms`))
-    .provideSomeLayer(Logger.consoleLoggerLayer)
-    .provideLayer(Layer.fromEffect(PairCount)(Ref.make([0, 1])))
-    .orDie
+interface EventQueue<E> extends Queue<E> {}
+
+const EventQueue = <E>() => Service.Tag<EventQueue<E>>()
+
+const MyQueue = EventQueue<number>()
+const printQueueSize = Effect.serviceWithEffect(
+  MyQueue,
+  queue => queue.size.tap(size => Effect.log(`Queue has ${size}`))
+).delay((5).seconds).forever
+const processQueue = Effect.serviceWithEffect(
+  EventQueue<number>(),
+  queue => queue.takeAll.tap(nums => Effect.forEach(nums, n => Effect.log(`message #is ${n}`).delay((1).seconds)))
+).delay((500).millis).forever
+
+const addToQueue = Effect.serviceWithEffect(
+  MyQueue,
+  queue => Effect.clock.flatMap(clock => clock.currentTime.flatMap(time => queue.offer(time)))
+).delay((1).seconds).forever
+
+export async function initStream() {
+  return Effect.collectPar(
+    [printQueueSize, addToQueue, processQueue],
+    identity
+  )
+    .provideLayer(Queue.bounded<number>(10).toLayer(MyQueue))
+    .provideLayer(Logger.consoleLoggerLayer)
     .unsafeRunPromise()
+  // const CountTag = Service.Tag<Ref<number>>()
+  // const PairCount = Service.Tag<Ref<[number, number]>>()
+  // Stream.fromEffect(
+  //   Effect.service(PairCount)
+  //     .flatMap((env) => env.getAndUpdate(([a, b]) => [b, a + b]))
+  // ).forever
+  //   .take(35)
+  //   .runLast
+  //   .map(_ => _.getOrElse(() => [0, 0] as const))
+  //   .map(([a, b]) => a + b)
+  //   .timed
+  //   .tap(([d, value]) => Effect.log(`fib(25) = ${value} duration ${d.millis}ms`))
+  //   .provideSomeLayer(Logger.consoleLoggerLayer)
+  //   .provideLayer(Layer.fromEffect(PairCount)(Ref.make([0, 1])))
+  //   .orDie
+  //   .unsafeRunPromise()
 }
+initStream()
