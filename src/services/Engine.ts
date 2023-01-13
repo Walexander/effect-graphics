@@ -7,7 +7,7 @@ export interface Engine<E> {
   publish(event: E): Effect<never, never, void>
   renderLoop<A, R2>(
     seed: A,
-    cb: (v: A, events: Chunk<E>) => Effect<R2, unknown, A>
+    cb: (v: A, events: Chunk<E>, time: GameTime) => Effect<R2, unknown, A>
   ): Effect<R2, unknown, void>
 }
 export const Engine = <E>() => Service.Tag<Engine<E>>()
@@ -37,12 +37,14 @@ export class EngineLive<E> implements Engine<E> {
 
   renderLoop<A, R>(
     seed: A,
-    cb: (v: A, events: Chunk<E>) => Effect<R, unknown, A>
+    cb: (v: A, events: Chunk<E>, t: GameTime) => Effect<R, unknown, A>
   ) {
     return this.dom
       .renderLoop(seed, (next, _) =>
+        // _.tick % 1e6 != 0
+        //   ? Effect.succeed(next)
         this.eventQueue.takeAll
-          .flatMap(events => cb(next, events)))
+          .flatMap(events => cb(next, events, _)))
   }
 }
 

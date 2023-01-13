@@ -15,7 +15,7 @@ export const pointDecoder = Decoder<Point>(u =>
 )
 
 /** @tsplus type graphics/Point */
-export interface Point extends Case {
+export interface Point {
   _tag: 'Point'
   x: number
   y: number
@@ -30,7 +30,7 @@ export interface PointOps {
 export const Point: PointOps = {
   $: {}
 }
-const makePoint_ = Case.tagged<Point>('Point')
+const makePoint_ = (point: PointStruct): Point => ({ _tag: 'Point', ...point })
 /**
  * @tsplus static graphics/PointOps __call
  * @tsplus static graphics/PointOps make
@@ -125,14 +125,19 @@ export function magnitude(of: Point) {
 }
 
 /**
+ * @tsplus pipeable graphics/Point distanceToSq
+ * @tsplus static graphics/PointAspects distanceToSq
+ */
+export function distanceToSq(to: Point) {
+  return (from: Point) => (to.x - from.x) * (to.x - from.x) + (to.y - from.y) * (to.y - from.y)
+}
+
+/**
  * @tsplus pipeable graphics/Point distanceTo
  * @tsplus static graphics/PointAspects distanceTo
  */
 export function distanceTo(to: Point) {
-  return (from: Point) =>
-    Math.sqrt(
-      (to.x - from.x) * (to.x - from.x) + (to.y - from.y) * (to.y - from.y)
-    )
+  return (from: Point) => Math.sqrt(distanceToSq(to)(from))
 }
 
 /**
@@ -154,6 +159,14 @@ export function getOrdByAngleFrom(from: Point) {
 }
 
 /**
+ * @tsplus getter graphics/Point getOrdByDistance
+ * @tsplus static graphics/PointAspects getOrdByDistance
+ */
+export function getOrdByDistance(from: Point) {
+  return Ord.number.contramap<number, Point>(_ => from.distanceToSq(_))
+}
+
+/**
  * @tsplus static graphics/PointOps min
  */
 export const minPoint = Associative<Point>(
@@ -166,6 +179,7 @@ export const ordYX = Ord.getAssociative<Point>().combine(
   Ord.number.contramap(_ => _.y),
   Ord.number.contramap(_ => _.x)
 )
+
 /**
  * @tsplus static graphics/PointOps OrdXY
  */
@@ -222,4 +236,26 @@ export function divideBy(divisor: Point): (dividend: Point) => Point {
 /** @tsplus getter graphics/Point toCanvas */
 export function renderPoint(self: Point): Render<never, void> {
   return Canvas.moveTo(self.x, self.y)
+}
+
+/**
+ * @tsplus getter graphics/Point abs
+ * @tsplus static graphics/PointAspects abs
+ */
+export function abs(from: Point) {
+  return Point(
+    Math.abs(from.x),
+    Math.abs(from.y)
+  )
+}
+/**
+ * @tsplus getter graphics/Point midpoint
+ * @tsplus static graphics/PointAspects midpoint
+ */
+export function midpoint(from: Point) {
+  return (to: Point) =>
+    Point(
+      from.x + (Math.abs((from.x - to.x) / 2)),
+      from.y + (Math.abs((from.y - to.y) / 2))
+    )
 }

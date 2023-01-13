@@ -68,7 +68,7 @@ export namespace SnakeGame {
     ))
 
   const initialState = () => makeSnake([Point(15, 7)], Point(0, 0))
-  const itEats = (apple: Point, snake: Point) => apple.equals(snake)
+  const itEats = (apple: Point, snake: Point) => apple == snake
 
   export const restartGame = setSnake(initialState())
   export const gameOver = getSnake.flatMap(snake => setSnake(makeSnake(snake.body, Point(0, 0))))

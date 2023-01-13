@@ -1,12 +1,13 @@
 import type { Render } from 'effect-canvas/Canvas'
 import { Canvas } from 'effect-canvas/Canvas'
-import { Dom, domLive } from 'effect-canvas/services/Dom'
+import * as QT from 'effect-canvas/QuadTree'
+import type { GameTime } from 'effect-canvas/services/Dom'
+import { domLive } from 'effect-canvas/services/Dom'
 import type { Engine } from 'effect-canvas/services/Engine'
 import { engineLive } from 'effect-canvas/services/Engine'
 import { Arc, Composite, Ellipse, Path, Point, Rect } from 'effect-canvas/Shapes'
 import { Angle } from 'effect-canvas/Units'
 
-import { gridLines } from './grid-lines'
 import { addHandlerI, clickStream, element } from './index2'
 
 export interface MovingObject {
@@ -31,7 +32,7 @@ export interface Config {
     separation: Point
   }
 }
-const edgeBox = Point(1024, 600).scale(Point.fromScalar(1))
+const edgeBox = Point(600, 400).scale(Point.fromScalar(1))
 export const Config = Service.Tag<Ref<Config>>()
 export const configLive = (config: Config) => Ref.make(config).toLayer(Config)
 const triangle = (length: number) => Composite([Path([Point(0, length), Point(-5, 0), Point(5, 0)], true)])
@@ -40,52 +41,33 @@ export const boidLoop = (config: Config) => {
   const behavior = boidBehavior(config)
   const limiter = limitSpeed(config.speedLimit)
   const walls = avoidEdges(config.bounds)
-  const update = updatePosition(0.1)
+  const wrap = identity // wrapEdges(config.bounds)
+  return <T extends MovingObject>(boids: Chunk<T>, lookup: SimulationState<MovingObject>['lookup'], time: GameTime) =>
+    boids.map(_ => pipe(_, behavior(boids, lookup), limiter, walls, wrap, updatePosition))
 
-  return <T extends MovingObject>(boids: Chunk<T>) => boids.map(_ => pipe(_, behavior(boids), limiter, walls, update))
-
-  function updatePosition<T extends MovingObject>(delta: number) {
-    return (boid: T): T => ({
+  function updatePosition<T extends MovingObject>(boid: T): T {
+    return ({
       ...boid,
-      velocity: boid.velocity.scale(Point(1.001, 1.001)),
-      position: boid.position.plus(boid.velocity.scale(Point(delta, delta)))
+      velocity: boid.velocity,
+      position: boid.position.plus(boid.velocity)
     })
   }
 }
-export const boidBehavior = <T extends MovingObject>({
-  scales: {
-    alignment: alignScale,
-    cohesion: cohesionScale,
-    separation: separateScale
-  },
-  ...config
-}: Config) =>
-  (boids: Chunk<T>) =>
-    (_: T) => {
-      const [align, separate, sticky] = pipe(
-        _,
-        flock(boids, config.vision),
-        herd => [
-          alignment(visible(herd)(_))(_),
-          separation(herd, config.minDistance)(_),
-          cohesion(visible(herd)(_))(_)
-        ]
-      )
-      return pipe({
-        ..._,
-        velocity: _.velocity.plus(
-          align
-            .scale(alignScale)
-            .plus(sticky.scale(cohesionScale))
-            .plus(separate.scale(separateScale))
-        )
-      })
-    }
+const wrapEdges = (bounds: Point) => {
+  const margin = bounds.scale(Point(0.9, 1))
+  return <T extends MovingObject>(boid: T) => ({
+    ...boid,
+    position: Point(
+      Math.abs((boid.position.x + bounds.x) % bounds.x),
+      boid.position.y
+    )
+  })
+}
 const avoidEdges = (bounds: Point) => {
   const margin = bounds.scale(Point(0.1, 0.1))
   const maxBounds = bounds.plus(margin.scale(Point(-1, -1)))
   return <T extends MovingObject>(_: T) => {
-    const turnFactor = _.velocity.magnitude / 10
+    const turnFactor = Math.max(1, _.velocity.magnitude / 10)
     let delta = Point(0, 0)
     if (_.position.x < margin.x) {
       delta = delta.plus(Point(turnFactor, 0))
@@ -114,11 +96,6 @@ const limitSpeed = (max: Point) => {
     velocity: Point(xclamp(_.velocity).x, yClamp(_.velocity).y)
   })
 }
-const sees = <T extends MovingObject>(looking: T, distance: number) =>
-  (candidate: T) =>
-    inFlock(looking, distance)(candidate)
-    && candidate.position.minus(looking.position).dot(looking.velocity.normalize)
-      > 0
 
 export const inFlock = (looking: MovingObject, distance: number) =>
   (candidate: MovingObject) =>
@@ -131,21 +108,32 @@ export const isVisible = (looking: MovingObject) =>
 export const flock = <T extends MovingObject>(boids: Chunk<T>, distance = 35) =>
   (member: T): Chunk<T> => boids.filter(inFlock(member, distance))
 
+export const flockFast = <T extends MovingObject>(
+  boids: Chunk<T>,
+  distance: number,
+  lookup: (r: Rect) => Chunk<number>
+) =>
+  (member: T): Chunk<T> =>
+    lookup(
+      Rect(member.position.x - distance / 2, member.position.y - distance / 2, distance, distance)
+    ).map(i => boids.unsafeGet(i)).filter((c) => c.position != member.position)
+      .take(10)
+// .sort(Point.$.getOrdByDistance(member.position).contramap((b: T) => b.position))
+// .take(10)
+
 export const visible = <T extends MovingObject>(boids: Chunk<T>) =>
   (member: T): Chunk<T> => boids.filter(isVisible(member))
 
 class RunningAverage {
-  constructor(readonly sum: number, readonly total = 1) {}
-  static empty = new RunningAverage(0, 0)
+  constructor(readonly sum: Point, readonly total = 1) {}
+  static empty = new RunningAverage(Point.fromScalar(0), 0)
   static Associative = Associative((x: RunningAverage, y: RunningAverage) => x.combine(y))
   static AssociativeIdentity = AssociativeIdentity(
     RunningAverage.empty,
     RunningAverage.Associative.combine
   )
   get average() {
-    return Maybe.fromPredicate(this.total, _ => _ != 0).map(
-      total => this.sum / total
-    )
+    return this.total == 0 ? Point.fromScalar(0) : this.sum.scale(Point.fromScalar(1 / this.total))
   }
   combine(that: RunningAverage) {
     return new RunningAverage(this.sum + that.sum, this.total + that.total)
@@ -174,52 +162,69 @@ const randomBoids = (total: number, bounding: Point) =>
             n - 1
           ])
         ))
+
+export const boidBehavior = <T extends MovingObject>({
+  scales: {
+    alignment: alignScale,
+    cohesion: cohesionScale,
+    separation: separateScale
+  },
+  ...config
+}: Config) =>
+  (boids: Chunk<T>, lookup: SimulationState<MovingObject>['lookup']) => {
+    const findFlock = flockFast(boids, config.vision * 2, lookup)
+    // const findFlock = flock(boids, config.vision)
+    return (current: T) => {
+      const [align, separate, sticky] = pipe(
+        findFlock(current),
+        herd => [
+          alignment(herd)(current),
+          separation(herd, config.minDistance)(current),
+          cohesion(herd)(current)
+        ]
+      )
+      return pipe({
+        ...current,
+        velocity: current.velocity.plus(
+          align
+            .scale(alignScale)
+            .plus(sticky.scale(cohesionScale))
+            .plus(separate.scale(separateScale))
+        )
+      })
+    }
+  }
+
 const alignment = <T extends MovingObject>(visible: Chunk<T>) =>
   (boid: T) =>
     visible.length == 0
       ? Point(0, 0)
       : pipe(
-        Point(
-          averageX(visible.map(_ => _.velocity)).average.getOrElse(0),
-          averageY(visible.map(_ => _.velocity)).average.getOrElse(0)
-        ),
+        averagePoint(visible.map(_ => _.velocity)).average,
         a => a.minus(boid.velocity)
       )
-
-const separation = <T extends MovingObject>(visible: Chunk<T>, distance: number) =>
-  (boid: T) =>
-    visible
-      .filter(_ => boid.position.distanceTo(_.position) <= distance)
-      .map(_ => boid.position.minus(_.position))
-      .reduce(Point(0, 0), (prev: Point, curr: Point) => prev.plus(curr))
 
 const cohesion = <T extends MovingObject>(visible: Chunk<T>) =>
   (boid: T) =>
     visible.length == 0
       ? Point(0, 0)
       : pipe(
-        Point(
-          averageX(visible.map(_ => _.position)).average.getOrElse(0),
-          averageY(visible.map(_ => _.position)).average.getOrElse(0)
-        ),
+        averagePoint(visible.map(_ => _.position)).average,
         avgLocation => avgLocation.minus(boid.position)
+        // avgLocation => boid.position - avgLocation
       )
-const averageItems = (items: Chunk<number>) =>
-  pipe(
-    items.map(_ => new RunningAverage(_)),
-    AssociativeIdentity.fold(RunningAverage.AssociativeIdentity)
-  )
-export const averageX = (flock: Chunk<Point>) =>
-  pipe(
-    flock.map(_ => _.x),
-    averageItems
-  )
-export const averageY = (flock: Chunk<Point>) =>
-  pipe(
-    flock.map(_ => _.y),
-    averageItems
-  )
 
+const separation = <T extends MovingObject>(visible: Chunk<T>, distance: number) => {
+  const distanceSq = (distance ** 2)
+  return (boid: T) =>
+    visible
+      .filter(_ => boid.position.distanceToSq(_.position) <= distanceSq)
+      .map(_ => boid.position.minus(_.position))
+      .reduce(Point(0, 0), (prev: Point, curr: Point) => prev.plus(curr))
+}
+
+export const averagePoint = (flock: Chunk<Point>) =>
+  flock.foldMap(RunningAverage.AssociativeIdentity, point => new RunningAverage(point))
 const drawSummary = <T extends MovingObject>(
   config: Config,
   herd: Chunk<T>,
@@ -227,8 +232,16 @@ const drawSummary = <T extends MovingObject>(
 ) =>
   Canvas.withContext(
     Canvas.beginPath()
-      > Canvas.fillText(`s ${_1.position.round.show} Δs ${_1.velocity.show}° `, 5, 0)
-      > Canvas.fillText(`Cohesion: ${cohesion(herd)(_1).scale(config.scales.cohesion).show}`, 5, 16 * 1)
+      > Canvas.fillText(
+        `s ${_1.position.round.show} Δs ${_1.velocity.show}° `,
+        5,
+        0
+      )
+      > Canvas.fillText(
+        `Cohesion: ${cohesion(herd)(_1).scale(config.scales.cohesion).show}`,
+        5,
+        16 * 1
+      )
       > Canvas.fillText(
         `Separation: ${
           separation(
@@ -244,12 +257,18 @@ const drawSummary = <T extends MovingObject>(
         5,
         16 * 3
       )
+      > Canvas.fillText(
+        `Flock Size: ${herd.length} (${visible(herd)(_1).length} visible)`,
+        5,
+        16 * 4
+      )
       > Canvas.fill()
   )
+
 function drawVisor(radius: number) {
-  const start = Angle.degrees(180)
-  const end = Angle.degrees(0)
-  return (
+  const start = Angle.degrees(0)
+  const end = Angle.degrees(360)
+  return Canvas.withContext(
     Canvas.setFillStyle(`hsla(0deg, 0%, 0%, 0.1)`)
       > Canvas.setStrokeStyle('hsla(0deg, 0%, 0%, 0.9)')
       > Arc({
@@ -265,7 +284,6 @@ function drawVisor(radius: number) {
         Point(radius * Math.cos(start.radians), radius * Math.sin(start.radians))
       ]).toCanvas
       > Canvas.fill()
-      > Canvas.stroke()
   )
 }
 function drawBoid(boid: Boid, visor = 0): Render<never, Boid> {
@@ -276,7 +294,7 @@ function drawBoid(boid: Boid, visor = 0): Render<never, Boid> {
       )
       > Canvas.beginPath()
       > Composite([
-        triangle(boid.velocity.magnitude),
+        triangle(10),
         Ellipse(
           0,
           0,
@@ -300,35 +318,33 @@ function drawBoid(boid: Boid, visor = 0): Render<never, Boid> {
       > Effect.succeed(boid)
   )
 }
-const drawFlock = <T extends MovingObject>(vision: number) =>
-  (as: Chunk<T>) =>
-    Canvas.withContext(
-      Canvas.beginPath()
-        > Effect.forEachWithIndex(as, (_, i) =>
-          Canvas.withContext(
-            drawBoid(
-              {
-                ..._,
-                color: i == 1
-                  ? 'black'
-                  : `hsla(${_.velocity.angleTo(Point(0, 0)).degrees}deg, 50%, 50%, 1.0)`
-              }
-            )
-          ))
-    )
-const onChangeStream = (id: string): Stream<never, Maybe<never>, Event> =>
+const drawFlock = <T extends MovingObject>(as: Chunk<T>) =>
+  Canvas.withContext(
+    Canvas.beginPath()
+      > Effect.forEachWithIndex(as, (_, i) =>
+        Canvas.withContext(
+          drawBoid({
+            ..._,
+            color: i == 1
+              ? 'periwinkle'
+              : 'black' // `hsla(${_.velocity.angleTo(Point(0, 0)).degrees}deg, 50%, 50%, 1.0)`
+          })
+        ))
+  )
+const onChangeStream = (id: string): Stream<never, Maybe<never>, string> =>
   pipe(
     element(id),
     Stream.fromEffect,
-    Stream.$.flatMap(_ => addHandlerI(_)('change', identity))
+    Stream.$.flatMap(_ =>
+      Stream.sync(() => (_ as HTMLInputElement).value).concat(
+        addHandlerI(_)('change', (event) => (event.target as HTMLInputElement).value)
+      )
+    )
   )
 interface PauseEvent extends Case {
   _tag: 'Pause'
 }
 const PauseEvent = Case.tagged<PauseEvent>('Pause')
-const PauseEventguard = Guard<PauseEvent>(
-  (u): u is PauseEvent => typeof u == 'object' && u != null && '_tag' in u && u._tag == 'Pause'
-)
 interface AddEvent extends Case {
   _tag: 'Add'
   position: Point
@@ -348,68 +364,69 @@ interface SelectParticle extends Case {
 export const SelectParticle = Case.tagged<SelectParticle>('SelectParticle')
 export const addInCircle = (count: number, point: Point, velocity: number) =>
   (engine: Engine<SimulationEvent>) =>
-    pipe(
-      Chunk.range(1, count).map(n => Angle.degrees(n * (360 / count)))
-        .map(angle =>
+    Effect.randomWith(rand =>
+      Effect.succeed(Angle.degrees(360 / count))
+        .flatMap(base => rand.nextIntBetween(0, base.degrees).map(Angle.degrees).zip(Effect.succeed(base)))
+        .flatMap(([offset, base]) =>
           pipe(
-            Point(
-              angle.cos,
-              angle.sin
-            ),
-            (velocity) => ({
-              position: velocity.plus(point),
-              velocity
-            })
-          )
-        ),
-      _ =>
-        Effect.forEach(
-          _,
-          _ =>
-            Effect.randomWith(rand =>
-              rand.nextRange(2, 2 + velocity).flatMap(rnd =>
-                engine.publish(AddEvent({
-                  ..._,
-                  position: _.position.plus(_.velocity.scale(Point.fromScalar(rnd * 10))),
-                  velocity: _.velocity.scale(Point.fromScalar(rnd))
+            Chunk.range(1, count)
+              .map(n => base.times(n).plus(offset))
+              .map(angle =>
+                pipe(Point(angle.cos, angle.sin), velocity => ({
+                  position: velocity.plus(point),
+                  velocity
                 }))
-              )
-            )
+              ),
+            newBoids =>
+              Effect.forEach(newBoids, _ =>
+                rand.nextRange(2, 2 + velocity).flatMap(rndVelocity =>
+                  engine.publish(
+                    AddEvent({
+                      ..._,
+                      position: _.position.plus(
+                        _.velocity.scale(Point.fromScalar(rndVelocity * 10))
+                      ),
+                      velocity: _.velocity.scale(Point.fromScalar(rndVelocity))
+                    })
+                  )
+                ))
+          )
         )
     )
-
-type SimulationEvent = PauseEvent | AddEvent | UpdateScalesEvent | SelectParticle
-type SimulationState<T extends MovingObject> = {
-  boids: Chunk<T>
-  config: Config
-  selected: number
-}
 const pauseGame = (engine: Engine<SimulationEvent>) =>
-  clickStream('toggle2')
-    .tap(click => engine.publish(PauseEvent({}))).runDrain
+  clickStream('toggle2').tap(click => engine.publish(PauseEvent({}))).runDrain
 
-const addBoid = (engine: Engine<SimulationEvent>, velocity: number) =>
-  clickStream('canvas4')
-    .tap(click =>
-      click.getModifierState('Shift')
-        ? addInCircle(7, Point(click.offsetX, click.offsetY), 10)(engine)
-        : engine.eventQueue.offer(SelectParticle({ location: Point(click.offsetX, click.offsetY) }))
+const handleClick = (engine: Engine<SimulationEvent>) =>
+  clickStream('canvas4').tap(click =>
+    pipe(
+      //         ^------ eehhhh?
+      [click.offsetX - 200, click.offsetY - 100] as const,
+      ([x, y]) =>
+        click.getModifierState('Shift')
+          ? addInCircle(8, Point(x, y), 15)(engine)
+          : click.getModifierState('Alt')
+          ? engine.eventQueue.offer(
+            SelectParticle({ location: Point(x, y) })
+          )
+          : Effect.unit
     )
-    .runDrain
+  ).runDrain
+
+function selectBoid(event: SelectParticle, boids: SimulationState<MovingObject>['boids']) {
+  const distanceOrd = Ord.number.contramap(({ position }: MovingObject) => position.distanceTo(event.location))
+  return pipe(
+    boids.sort(distanceOrd).unsafeHead,
+    a =>
+      a.position.distanceTo(event.location) <= 50
+        ? boids.findIndex(_ => _.position == a.position).getOrElse(-1)
+        : -1
+  )
+}
 const eventReducer = (state: SimulationState<MovingObject>) =>
   Match.tagFor<SimulationEvent>()({
     SelectParticle: event => ({
       ...state,
-      selected: state.selected >= 0
-        ? -1
-        : pipe(
-          state.boids.sort(
-            Ord.number.contramap<number, MovingObject>(
-              ({ position }) => position.distanceTo(event.location)
-            )
-          ).unsafeHead,
-          (a) => state.boids.findIndex(_ => _.position == a.position).getOrElse(-1)
-        )
+      selected: selectBoid(event, state.boids)
     }),
     Pause: () => ({
       ...state,
@@ -433,65 +450,109 @@ const eventReducer = (state: SimulationState<MovingObject>) =>
       }
     })
   })
+
+type SimulationEvent =
+  | PauseEvent
+  | AddEvent
+  | UpdateScalesEvent
+  | SelectParticle
+type SimulationState<T extends MovingObject> = {
+  boids: Chunk<T>
+  config: Config
+  selected: number
+  lookup: (range: Rect) => Chunk<number>
+}
+const refreshLookup = (bounds: Rect, boids: Chunk<MovingObject>) =>
+  pipe(
+    [
+      bounds,
+      boids.mapWithIndex((i, p) => [i, p.position] as [number, Point])
+    ],
+    QT.queryFromList<number>(3, 5)
+    // Recursive.refold(QT.Functor, QT.fromList<[bounds](3, 5), QT.queryBuilder<number>())
+    // QT.fromList(3, 5),
+    // QT.queryBuilder<number>()
+  )
+
 const withEngine = (config: Config, engine: Engine<SimulationEvent>) => {
-  return randomBoids(12, config.bounds)
-    .map(boids => ({
+  return randomBoids(16, config.bounds)
+    .map(boids => (<SimulationState<MovingObject>> {
       selected: -1,
       boids,
-      config
+      config,
+      lookup: refreshLookup(Rect(0, 0, config.bounds.x, config.bounds.y), boids)
     }))
     .flatMap(s0 =>
-      engine.renderLoop(s0, (st, events) =>
-        Effect.succeed({
-          ...st,
-          boids: st.config.paused ? st.boids : boidLoop(st.config)(st.boids)
-        })
-          .map((_: SimulationState<MovingObject>): SimulationState<MovingObject> =>
-            events.reduce(_, (state, event) => eventReducer(state)(event))
+      engine.renderLoop(s0, (st, events, time) =>
+        Effect.succeed(
+          pipe(
+            events,
+            Chunk.$.reduce(st, (state, event) => eventReducer(state)(event)),
+            st_ =>
+              st_.config.paused ? st_ : ({
+                ...st_,
+                boids: boidLoop(st_.config)(st_.boids, st_.lookup, time),
+                lookup: refreshLookup(Rect(0, 0, config.bounds.x, config.bounds.y), st_.boids)
+              })
           )
-          .tap(
-            _ =>
-              Canvas.clearRect(0, 0, 1024, 768)
-                > gridLines
-                > drawFlock(_.config.vision)(_.boids)
-                > drawScales(_.config)
-          )
+        )
           .tap(_ =>
-            _.selected >= 0
-              ? drawBoidDetails(_.config, _.boids, _.boids.unsafeGet(_.selected))
-              : Effect.unit
+            Canvas.withContext(
+              Canvas.clearRect(0, 0, 1024, 768)
+                > Canvas.translate(200, 100)
+                > (Rect(0, 0, edgeBox.x, edgeBox.y).toCanvas > Canvas.stroke())
+                // > gridLines
+                > drawFlock(_.boids)
+                > drawScales(_.config, _.boids.length)
+                > (_.selected >= 0
+                  ? drawBoidDetails(
+                    _.config,
+                    _.boids,
+                    _.boids.unsafeGet(_.selected),
+                    st.lookup
+                  )
+                  : Effect.unit)
+            )
           ))
     )
 }
-const drawBoidDetails = (config: Config, boids: Chunk<MovingObject>, boid: MovingObject) =>
-  pipe(flock(boids, config.vision)(boid), flock =>
-    Canvas.withContext(
-      Effect.forEachDiscard([
-        Canvas.translate(20, 400),
-        Canvas.scale(1.5, 1.5),
-        drawSummary(
-          config,
-          flock,
-          boid
+const drawBoidDetails = (
+  config: Config,
+  boids: Chunk<MovingObject>,
+  boid: MovingObject,
+  lookup: (r: Rect) => Chunk<number>
+) =>
+  pipe(
+    flockFast(boids, config.vision * 2, lookup)(boid),
+    flock =>
+      Canvas.withContext(
+        Effect.forEachDiscard(
+          [
+            Canvas.translate(20, 400),
+            Canvas.scale(1.5, 1.5),
+            drawSummary(config, flock, boid)
+          ],
+          identity
         )
-      ], identity)
-    )
-      .zip(
+      ).zip(
         drawBoid({ ...boid, color: 'orange' }, config.vision)
           > Effect.forEachDiscard(
             flock.map(o =>
               Canvas.withContext(
-                Canvas.beginPath() > Canvas.moveTo(boid.position.x, boid.position.y)
+                Canvas.beginPath()
+                  > Canvas.moveTo(boid.position.x, boid.position.y)
                   > Canvas.lineTo(o.position.x, o.position.y)
                   > Canvas.setStrokeStyle(
-                    sees(boid, config.vision)(o) ? 'green' : 'red'
-                  ) > Canvas.stroke()
+                    isVisible(boid)(o) ? 'green' : 'red'
+                  )
+                  > Canvas.stroke()
               )
             ),
             identity
           )
-      ))
-const drawScales = (config: Config) =>
+      )
+  )
+const drawScales = (config: Config, total = 0) =>
   Canvas.withContext(
     Canvas.scale(1.25, 1.25)
       > Canvas.translate(20, 10)
@@ -500,13 +561,14 @@ const drawScales = (config: Config) =>
 limit: ${config.speedLimit.show}; alignment: ${config.scales.alignment.show}
 cohesion: ${config.scales.cohesion.show}
 separation: ${config.scales.separation.show}
+total: ${total}
 `,
         5,
         0
       )
   )
 const BoidEngineService = Service.Tag<Engine<SimulationEvent>>()
-const liveBoidEngine = Queue.bounded<SimulationEvent>(16)
+const liveBoidEngine = Queue.bounded<SimulationEvent>(64)
   .flatMap(q => engineLive(q))
   .toLayer(BoidEngineService)
 
@@ -514,15 +576,15 @@ const configChangeEngine = Effect.serviceWithEffect(BoidEngineService, engine =>
   Effect.forEachPar(
     ['alignment', 'cohesion', 'separation'] as const,
     key =>
-      onChangeStream(key)
-        .tap(event =>
-          Effect.sync(() => event.target as HTMLInputElement).flatMap(source =>
-            engine.publish(UpdateScaleEvent({
-              scaleKey: key,
-              scaleValue: Point.fromScalar(parseFloat(source.value) / 100)
-            }))
-          )
-        ).runDrain
+      onChangeStream(key).tap((value) =>
+        engine.publish(
+          UpdateScaleEvent({
+            scaleKey: key,
+            scaleValue: Point.fromScalar(parseFloat(value))
+          })
+        )
+      )
+        .runDrain
   ))
 
 export const simulationEngine = Effect.serviceWithEffect(
@@ -532,18 +594,18 @@ export const simulationEngine = Effect.serviceWithEffect(
       {
         bounds: edgeBox,
         paused: true,
-        speedLimit: Point.fromScalar(15),
-        vision: 105,
-        minDistance: 15,
+        speedLimit: Point.fromScalar(5),
+        vision: 40,
+        minDistance: 20,
         scales: {
-          alignment: Point.fromScalar(0.025),
-          cohesion: Point.fromScalar(0.025),
-          separation: Point.fromScalar(0.125)
+          alignment: Point.fromScalar(0.),
+          cohesion: Point.fromScalar(0.0),
+          separation: Point.fromScalar(0.0)
         }
       },
       engine
     )
       .zipPar(pauseGame(engine))
-      .zipFlattenPar(addBoid(engine, 10))
+      .zipFlattenPar(handleClick(engine))
       .zipFlattenPar(configChangeEngine)
 ).provideSomeLayer(domLive > liveBoidEngine)

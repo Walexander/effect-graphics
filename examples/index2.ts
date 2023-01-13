@@ -77,15 +77,15 @@ const clearCanvas = Canvas.dimensions().flatMap(({ height, width }) =>
 
 function updateTextArea(id: string, value: string) {
   const hull = document.getElementById(id)
-  return hull instanceof HTMLTextAreaElement ?
-    Effect.sync(() => {
+  return hull instanceof HTMLTextAreaElement
+    ? Effect.sync(() => {
       hull.value = value
-    }) :
-    Effect.logWarning(`cannot find text area ${id}`).zipRight(Effect.fail(`cannot find ${id}`))
+    })
+    : Effect.logWarning(`cannot find text area ${id}`).zipRight(Effect.fail(`cannot find ${id}`))
 }
 const drawRandomPoints2 = (points: HashSet<Point>) =>
-  gridLines >
-    drawHull2(points).tap(_ => updateTextArea('points-json', JSON.stringify(_)).orDie)
+  gridLines
+    > drawHull2(points).tap(_ => updateTextArea('points-json', JSON.stringify(_)).orDie)
 
 export const element = (id: string) =>
   Effect.sync(() => document.getElementById(id)).map(Maybe.fromNullable).flatMap(Effect.fromMaybe)
@@ -237,12 +237,12 @@ export const init2 = () => {
     .zipPar(_countstream.runDrain)
     .zipPar(_incrementStream.runDrain.zipLeft(Effect.log(`DONE with circles`)))
     .zipPar(clickStream('restart').runDrain)
-    .zipPar(progressCircle(0))
+    // .zipPar(progressCircle(0))
     .provideSomeLayer(
-      refLayer +
-        pointLayer +
-        Logger.consoleLoggerLayer +
-        Canvas.liveLayer('canvas2').orDie
+      refLayer
+        + pointLayer
+        + Logger.consoleLoggerLayer
+        + Canvas.liveLayer('canvas2').orDie
     )
     .unsafeRunSyncExit()
 }

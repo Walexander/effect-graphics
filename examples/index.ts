@@ -1,13 +1,17 @@
 import { DurationInternal } from '@tsplus/stdlib/data/Duration'
-import { Canvas } from 'effect-canvas/Canvas'
+import { canvas } from 'effect-canvas'
 import { binaryTree, diamond, plant as plantCurve, snowflake } from 'effect-canvas/lsystem/curves'
-import { Arc, Composite, Ellipse, Path, Point, Point as Point2, Rect } from 'effect-canvas/Shapes'
+import * as QT from 'effect-canvas/QuadTree'
+import type { Point } from 'effect-canvas/Shapes'
+import { Point as Point2, Rect } from 'effect-canvas/Shapes'
 import { Turtle2D } from 'effect-canvas/Turtle2D'
 import { Angle } from 'effect-canvas/Units'
 
 import * as Boids from './boids'
 import { gridLines } from './grid-lines'
-import { clickStream, init2 } from './index2'
+import { init2 } from './index2'
+
+const Canvas = canvas.Canvas
 
 export { init2 }
 
@@ -129,9 +133,83 @@ export function init() {
       > spiralMaker(22)
   )
   const all = (gridLines > kochCurveExample > trees > myPlant) / Canvas.withContext
-  Boids.simulationEngine.provideLayer(
+  const simulation = Boids.simulationEngine.provideLayer(
     Logger.consoleLoggerLayer + Canvas.liveLayer('canvas4')
-  ).unsafeRunPromise()
+  ) // .unsafeRunPromise()
+
+  const drawPoints = (_: [number, Point][]) =>
+    Effect.log(`Got ${_.length} values`)
+      > Effect.forEach(_, ([v, point]) =>
+        Canvas.withContext(
+          Canvas.translate(point.x, point.y)
+            .zip(Canvas.setFillStyle('green'))
+            .zip(Canvas.beginPath())
+            .zip(Canvas.arc(0, 0, 6, 0, Math.PI * 2))
+            .zip(Canvas.fill())
+        ))
+  const bounds = Rect(0, 0, 640, 480)
+  const searchW = 100
+  const searchH = 100
+  const qt2 = Point2.randomPoints(64, bounds.min, bounds.max)
+    .map(a => Chunk.from(a.toCollection).mapWithIndex((i, p) => [i, p] as [number, Point]))
+    .map(points =>
+      pipe(
+        [bounds, points],
+        QT.fromList(4, 1),
+        QT.queryBuilder<number>(),
+        _ => [points, _] as const
+      )
+    )
+    .tap(([pointEntities, fn]) =>
+      Canvas.withContext(
+        Canvas.translate(50, 50)
+          > Canvas.scale(1, 1)
+          > Canvas.withContext(
+            Canvas.clearRect(bounds.min.x, bounds.min.y, bounds.width, bounds.height)
+              > Canvas.beginPath()
+              > bounds.toCanvas
+              > Canvas.setStrokeStyle('red')
+              > Canvas.stroke()
+          )
+          > Effect.forEach(pointEntities, ([, p]) =>
+            Canvas.withContext(
+              Canvas.translate(p.x, p.y)
+                > Canvas.beginPath()
+                > Canvas.arc(0, 0, 4, 0, Math.PI * 2)
+                > Canvas.setFillStyle('orange')
+                > Canvas.fill()
+            ))
+            .zip(
+              Effect.randomWith(rnd =>
+                rnd.nextIntBetween(bounds.min.x, bounds.max.x - searchW).zip(
+                  rnd.nextIntBetween(bounds.min.y, bounds.max.y - searchH)
+                )
+              ).map(([x, y]) => Rect(x, y, searchW, searchH))
+                .flatMap(range =>
+                  pipe(
+                    fn(range),
+                    _ => _.toArray.map(i => pointEntities.unsafeGet(i)),
+                    drawPoints,
+                    Effect.$.zip(Canvas.withContext(Effect.forEachDiscard([
+                      Canvas.beginPath(),
+                      Canvas.setStrokeStyle('green'),
+                      Canvas.rect(range.min.x, range.min.y, range.width, range.height),
+                      Canvas.stroke()
+                    ], identity)))
+                  )
+                )
+            )
+      ).delay((2).seconds).forever
+    )
+    // .tap(_ => Effect.log(_.toArray.join(', ')))
+    .provideLayer(Logger.consoleLoggerLayer + Canvas.liveLayer('canvas4'))
+  const cb = (event: Event) => {
+    event?.target?.removeEventListener('click', cb)
+    simulation.unsafeRunPromise()
+  }
+  document
+    .getElementById('toggle2')
+    ?.addEventListener('click', cb)
   document
     .getElementById('koch-snowflake')
     ?.addEventListener('click', () => draw(kochCurveExample))

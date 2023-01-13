@@ -22,6 +22,7 @@ export const fromGradians = (gradient: number) => Angle({ radians: gradient * (M
 /** @tsplus static graphics/AngleOps turns */
 export const fromTurns = (turns: number) => Angle({ radians: turns * Math.PI * 2 })
 
+
 /**
  * Add two angles
  *
@@ -30,6 +31,14 @@ export const fromTurns = (turns: number) => Angle({ radians: turns * Math.PI * 2
  * @tsplus static graphics/AngleOps plus
  */
 export const plusAngle = (addend: Angle) => (augend: Angle) => Angle({ radians: augend.radians + addend.radians })
+
+/**
+ * Multiply a scalar and an angle
+ *
+ * @tsplus getter graphics/Angle times
+ * @tsplus static graphics/AngleOps times
+ */
+export const timesScalar = (addend: Angle) => (i: number) => Angle.radians(addend.radians * i)
 
 /**
  * @tsplus getter graphics/Angle degrees
