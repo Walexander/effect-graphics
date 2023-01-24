@@ -129,7 +129,7 @@ export const init2 = () => {
     )
   })
   const RefTag = Service.Tag<Ref<number>>()
-  const refLayer = Layer.fromEffect(RefTag)(Ref.make(25))
+  const refLayer = Layer.fromEffect(RefTag)(Ref.make(5))
   const getCount = Effect.service(RefTag).flatMap(_ => _.get)
   const setCount = (value: number) => Effect.service(RefTag).flatMap(_ => _.set(value))
 
@@ -172,7 +172,7 @@ export const init2 = () => {
     .mapEffect(_ => getCount.flatMap(randomCanvasPoints).tap(addPoints).zipRight(getPoints))
 
   const _pointStream = clickStream('points').mapEffect(_ =>
-    gridLines > randomCanvasPoints(25).flatMap(_ => drawHull2(_))
+    gridLines > randomCanvasPoints(15).flatMap(_ => drawHull2(_))
   )
   const getValue = (el: HTMLInputElement) => Effect.sync(() => el.value)
 
@@ -184,37 +184,6 @@ export const init2 = () => {
     Stream.$.map(_ => parseInt(_, 10)),
     Stream.$.mapEffect(_ => Effect.log(`"COUNT" updated: ${_}`) > setCount(_))
   )
-  const face = Canvas.beginPath()
-    > Arc(0, 0, 100, Angle.degrees(0), Angle.degrees(360)).toCanvas
-    > Canvas.closePath()
-
-  const centerPiece = Canvas.beginPath()
-    > Arc(0, 0, 10, Angle.degrees(0), Angle.degrees(360), true).toCanvas
-    > Canvas.closePath()
-
-  const angleProgress = (percent: number) =>
-    Canvas.beginPath()
-      > Canvas.moveTo(0, 0)
-      > Canvas.lineTo(100, 0 // Math.cos(Math.PI * 2 * (percent / 100)),
-        // Math.sin(Math.PI * 2 * (percent / 100))
-      )
-      > Arc(0, 0, 10, Angle.degrees(0), Angle.degrees(360 * (percent + 1) / 100), true).toCanvas
-      > Canvas.lineTo(0, 0)
-      > Canvas.fill()
-
-  const progressCircle = (percent: number) =>
-    (
-      Canvas.translate(512, 300)
-        > Canvas.scale(2, 2)
-        > Canvas.withContext(face > Canvas.setFillStyle('mauve') > Canvas.fill() > Canvas.stroke())
-        > (Canvas.setFillStyle(`hsla(180deg, 50%, 50%, 0.9)`) > angleProgress(percent)) / Canvas.withContext
-        > (centerPiece > Canvas.setFillStyle('red') > Canvas.stroke() > Canvas.fill()) / Canvas.withContext
-    ) / Canvas.withContext
-
-  // const _incrementStream = clickStream('start')
-  // .scan(90, (s, _) => (s + 1) % 100).mapEffect(percent =>
-  //   progressCircle(percent)
-  // )
   const _incrementStream = clickStream('start').mapEffect(_ => Effect.log(`starting ...`) > gridLines > game())
 
   const updatePoints = (points: HashSet<Point>) =>
@@ -226,7 +195,9 @@ export const init2 = () => {
             > setText('hull-size', _.length.toFixed())
             > setText('points-size', points.size.toFixed())
         ).orDie
+
   void _tickstream
+    .tap(_ => Canvas.resize())
     .mapEffect(updatePoints)
     .runDrain.orDie.zipPar(
       _boomstream.mapEffect(

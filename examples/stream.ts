@@ -11,12 +11,12 @@ const EventQueue = <E>() => Service.Tag<EventQueue<E>>()
 const qt = QT.fromList<number>(4)(
   [
     Rect(0, 0, 100, 100),
-    Chunk.from([
+    [
       [0, Point(10, 10)],
       [1, Point(77, 55)],
       [2, Point(99, 99)],
       [3, Point(55, 59)]
-    ])
+    ]
   ]
 )
 
@@ -27,12 +27,12 @@ const qt2 = Point2.randomPoints(10, Point2(0, 0), Point2(100, 100))
     pipe(
       [
         Rect(0, 0, 100, 100),
-        Chunk.from<[number, Point]>([
+        <[number, Point][]> [
           [0, Point(25, 25)],
           [1, Point(75, 25)],
           [2, Point(25, 75)],
           [2, Point(75, 75)]
-        ])
+        ]
       ] as const,
       QT.fromList(1),
       QT.queryBuilder<number>(),

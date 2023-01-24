@@ -102,25 +102,6 @@ function fromListCoalgebra<R = unknown, E = any>(count: number, epsilon = 1): Un
       [bl, sw],
       [br, se]
     ]
-    // return pipe(
-    //   items,
-    //   // first sort along the `y-axis`
-    //   Chunk.$.partition(a => sortY.gt([null, mid], a)),
-    //   // now sort left and right
-    //   ([above, below]) =>
-    //     [
-    //       Chunk.$.partition(xSort)(above),
-    //       Chunk.$.partition(xSort)(below)
-    //     ] as const,
-    //   ([[nw, ne], [sw, se]]) => [
-    //     // finally, pair each chunk of points with its
-    //     // split rectangle location
-    //     [ul, nw],
-    //     [ur, ne],
-    //     [bl, sw],
-    //     [br, se]
-    //   ]
-    // )
   }
 }
 

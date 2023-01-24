@@ -1,6 +1,5 @@
 {
     "compilerOptions": {
-        "moduleDetection": "force",
         "composite": true,
         "downlevelIteration": true,
         "resolveJsonModule": true,
@@ -13,7 +12,7 @@
         "moduleResolution": "node",
         "noEmit": false,
         "lib": [
-            "ES2021",
+            "es2021",
       "dom", "dom.iterable"
         ],
         "sourceMap": true,
@@ -35,8 +34,8 @@
         "noUncheckedIndexedAccess": true,
         "strictNullChecks": true,
         "baseUrl": ".",
-        "target": "ES2021",
-        "module": "es2020",
+        "target": "es2021",
+        "module": "esnext",
         "incremental": true,
         "removeComments": false,
         "paths": {

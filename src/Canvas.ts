@@ -46,8 +46,8 @@ export interface Arc {
   counterclockwise: boolean
 }
 /** @tsplus static Canvas/Ops fill */
-export function fill(): Render<never, void> {
-  return Effect.service(Canvas.Tag).tap(ctx => Effect.sync(() => ctx.fill()))
+export function fill(_: boolean): Render<never, void> {
+  return _ ? Effect.service(Canvas.Tag).tap(ctx => Effect.sync(() => ctx.fill())) : Effect.unit
 }
 /** @tsplus static Canvas/Ops save */
 export function save(): Render<never, void> {
@@ -104,6 +104,18 @@ export function withContext<A>(effect: Render<never, A>): Render<never, A> {
 /** @tsplus static Canvas/Ops dimensions */
 export function getDimensions(): Render<never, { width: number; height: number }> {
   return Effect.service(Canvas.Tag).flatMap((ctx) => Effect.sync(() => ctx.canvas.getBoundingClientRect()))
+}
+/** @tsplus static Canvas/Ops resize */
+export function resize(): Render<never, { width: number; height: number }> {
+  return Effect.service(Canvas.Tag).flatMap((ctx) =>
+    Effect.sync(() => ctx.canvas.getBoundingClientRect())
+      .tap((rect) =>
+        Effect.sync(() => {
+          ctx.canvas.width = rect.width
+          ctx.canvas.height = rect.height
+        })
+      )
+  )
 }
 
 /** @tsplus static Canvas/Ops setStrokeStyle */

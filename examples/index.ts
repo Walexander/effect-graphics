@@ -151,7 +151,7 @@ export function init() {
   const searchW = 100
   const searchH = 100
   const qt2 = Point2.randomPoints(64, bounds.min, bounds.max)
-    .map(a => Chunk.from(a.toCollection).mapWithIndex((i, p) => [i, p] as [number, Point]))
+    .map(a => Chunk.from(a.toCollection).mapWithIndex((i, p) => [i, p] as [number, Point]).toArray)
     .map(points =>
       pipe(
         [bounds, points],
@@ -188,7 +188,7 @@ export function init() {
                 .flatMap(range =>
                   pipe(
                     fn(range),
-                    _ => _.toArray.map(i => pointEntities.unsafeGet(i)),
+                    _ => _.toArray.map(i => pointEntities[i]!),
                     drawPoints,
                     Effect.$.zip(Canvas.withContext(Effect.forEachDiscard([
                       Canvas.beginPath(),

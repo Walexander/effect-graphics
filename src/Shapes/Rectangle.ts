@@ -59,7 +59,7 @@ export function renderRectangle(self: Rect): Render<never, void> {
     self.max.y - self.min.y
   )
 }
-const empty = make({
+export const empty = make({
   min: Point(0, 0),
   max: Point(0, 0)
 })
